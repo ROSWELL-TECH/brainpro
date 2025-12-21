@@ -1,0 +1,56 @@
+use crate::config::{BackendConfig, Config};
+use crate::llm::Client;
+use anyhow::{anyhow, Result};
+use std::collections::HashMap;
+
+/// Registry of backends with lazy-loaded clients
+pub struct BackendRegistry {
+    backends: HashMap<String, BackendConfig>,
+    clients: HashMap<String, Client>,
+}
+
+impl BackendRegistry {
+    /// Create a new registry from config
+    pub fn new(config: &Config) -> Self {
+        Self {
+            backends: config.backends.clone(),
+            clients: HashMap::new(),
+        }
+    }
+
+    /// Get or create a client for a backend
+    pub fn get_client(&mut self, backend: &str) -> Result<&Client> {
+        if !self.clients.contains_key(backend) {
+            let config = self
+                .backends
+                .get(backend)
+                .ok_or_else(|| anyhow!("Unknown backend: {}", backend))?;
+
+            let api_key = config.resolve_api_key().map_err(|_| {
+                anyhow!(
+                    "No API key for backend '{}'. Set {} or configure api_key in config.",
+                    backend,
+                    config
+                        .api_key_env
+                        .as_deref()
+                        .unwrap_or("the appropriate env var")
+                )
+            })?;
+
+            let client = Client::new(&config.base_url, &api_key);
+            self.clients.insert(backend.to_string(), client);
+        }
+
+        Ok(self.clients.get(backend).unwrap())
+    }
+
+    /// List all configured backends
+    pub fn list_backends(&self) -> Vec<(&String, &BackendConfig)> {
+        self.backends.iter().collect()
+    }
+
+    /// Check if a backend exists
+    pub fn has_backend(&self, name: &str) -> bool {
+        self.backends.contains_key(name)
+    }
+}

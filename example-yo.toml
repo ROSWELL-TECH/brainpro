@@ -1,0 +1,147 @@
+# Example yo configuration file
+#
+# Place this file at:
+#   ~/.yo/config.toml         (user-level, applies to all projects)
+#   .yo/config.toml           (project-level, overrides user-level)
+#   .yo/config.local.toml     (local overrides, should be gitignored)
+#
+# Or specify explicitly with: yo --config /path/to/config.toml
+#
+# Precedence (highest to lowest):
+#   1. CLI flags (--mode, --allowed-tools, etc.)
+#   2. .yo/config.local.toml
+#   3. .yo/config.toml
+#   4. ~/.yo/config.toml
+#   5. Built-in defaults
+
+# =============================================================================
+# BACKENDS
+# =============================================================================
+# Each backend represents an API provider. Built-in backends (venice, chatgpt,
+# claude, ollama) are pre-configured but can be overridden here.
+#
+# Required fields:
+#   base_url     - The API base URL
+#
+# Optional fields:
+#   api_key_env  - Environment variable name containing the API key (recommended)
+#   api_key      - Direct API key (discouraged; use api_key_env instead)
+
+[backends.venice]
+base_url = "https://api.venice.ai/api/v1"
+api_key_env = "VENICE_API_KEY"
+
+[backends.chatgpt]
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+
+[backends.claude]
+base_url = "https://api.anthropic.com/v1"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[backends.ollama]
+base_url = "http://localhost:11434/v1"
+# Ollama typically doesn't require an API key
+
+# =============================================================================
+# SKILLS
+# =============================================================================
+# Skills map task categories to targets. A target is "model@backend".
+#
+# The "default" skill is used when no specific skill is selected.
+# Switch skills in REPL with: /skill <name>
+
+[skills]
+default = "qwen3-235b-a22b-instruct-2507@venice"
+# planning = "gpt-4@chatgpt"
+# coding = "claude-3-5-sonnet-latest@claude"
+# fast = "llama3.2@ollama"
+
+# =============================================================================
+# PERMISSIONS
+# =============================================================================
+# Control which tool operations are allowed, denied, or require prompting.
+#
+# mode: Controls default permission behavior
+#   "default"           - Prompt for Write/Edit/Bash, allow Read/Grep/Glob
+#   "acceptEdits"       - Auto-allow Write/Edit, still prompt for Bash
+#   "bypassPermissions" - Allow everything (dangerous!)
+#
+# Rules use pattern matching:
+#   "ToolName"              - Match all calls to that tool
+#   "ToolName(prefix:*)"    - Match calls where argument starts with prefix
+#   "ToolName(exact)"       - Match calls with exact argument
+#
+# Rule priority: deny > ask > allow > mode defaults
+
+[permissions]
+mode = "default"
+
+# Allow common safe operations without prompting
+allow = [
+    "Bash(cargo build:*)",
+    "Bash(cargo test:*)",
+    "Bash(cargo clippy:*)",
+    "Bash(cargo fmt:*)",
+    "Bash(cargo run:*)",
+    "Bash(git status:*)",
+    "Bash(git diff:*)",
+    "Bash(git log:*)",
+    "Bash(git branch:*)",
+    "Bash(git show:*)",
+    "Bash(ls:*)",
+    "Bash(pwd:*)",
+    "Bash(cat:*)",
+    "Bash(head:*)",
+    "Bash(tail:*)",
+    "Bash(wc:*)",
+    "Bash(echo:*)",
+]
+
+# Always prompt for these, even if otherwise allowed
+ask = [
+    "Bash(git commit:*)",
+    "Bash(git push:*)",
+    "Bash(git checkout:*)",
+    "Bash(git reset:*)",
+    "Bash(git rebase:*)",
+    "Bash(rm:*)",
+]
+
+# Block dangerous operations (curl/wget are blocked by default)
+deny = [
+    "Bash(sudo:*)",
+    "Bash(rm -rf:*)",
+    # "Bash(curl:*)",   # Already blocked by default
+    # "Bash(wget:*)",   # Already blocked by default
+]
+
+# =============================================================================
+# BASH TOOL
+# =============================================================================
+# Configuration for the Bash tool execution.
+
+[bash]
+# Command timeout in milliseconds (default: 120000 = 2 minutes, max: 600000)
+timeout_ms = 120000
+
+# Maximum output bytes to capture (default: 200000 = 200KB)
+max_output_bytes = 200000
+
+# =============================================================================
+# CONTEXT
+# =============================================================================
+# Configuration for conversation context management and compaction.
+
+[context]
+# Maximum context size in characters before triggering auto-compaction
+max_chars = 250000
+
+# Threshold ratio to trigger auto-compaction (0.0 - 1.0)
+auto_compact_threshold = 0.95
+
+# Enable/disable automatic compaction
+auto_compact_enabled = true
+
+# Number of recent turns to keep after compaction
+keep_last_turns = 10
