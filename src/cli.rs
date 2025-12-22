@@ -18,6 +18,14 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+/// Get the path to the history file
+fn history_path() -> PathBuf {
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".yo")
+        .join("history")
+}
+
 pub struct Context {
     pub args: Args,
     pub root: PathBuf,
@@ -62,6 +70,10 @@ pub fn run_repl(ctx: Context) -> Result<()> {
     let mut rl = DefaultEditor::new()?;
     let mut messages = Vec::new();
 
+    // Load command history
+    let history_file = history_path();
+    let _ = rl.load_history(&history_file);
+
     println!("yo - type /help for commands, /exit to quit");
 
     loop {
@@ -97,6 +109,12 @@ pub fn run_repl(ctx: Context) -> Result<()> {
             }
         }
     }
+
+    // Save command history (create parent directory if needed)
+    if let Some(parent) = history_file.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = rl.save_history(&history_file);
 
     Ok(())
 }

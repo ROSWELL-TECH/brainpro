@@ -47,7 +47,11 @@ fn verbose(ctx: &Context, message: &str) {
     }
 }
 
-pub fn run_turn(ctx: &Context, user_input: &str, messages: &mut Vec<Value>) -> Result<CommandStats> {
+pub fn run_turn(
+    ctx: &Context,
+    user_input: &str,
+    messages: &mut Vec<Value>,
+) -> Result<CommandStats> {
     let mut stats = CommandStats::default();
     let _ = ctx.transcript.borrow_mut().user_message(user_input);
 
