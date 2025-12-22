@@ -98,6 +98,9 @@ pub fn parse_skill_md(path: &Path) -> Result<SkillPack> {
 }
 
 fn validate_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        return Err(anyhow!("Skill name cannot be empty"));
+    }
     if name.len() > MAX_NAME_LEN {
         return Err(anyhow!("Skill name exceeds {} chars", MAX_NAME_LEN));
     }
@@ -113,6 +116,9 @@ fn validate_name(name: &str) -> Result<()> {
 }
 
 fn validate_description(desc: &str) -> Result<()> {
+    if desc.is_empty() {
+        return Err(anyhow!("Skill description cannot be empty"));
+    }
     if desc.len() > MAX_DESCRIPTION_LEN {
         return Err(anyhow!("Description exceeds {} chars", MAX_DESCRIPTION_LEN));
     }

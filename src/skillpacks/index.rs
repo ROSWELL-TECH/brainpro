@@ -117,9 +117,13 @@ impl SkillIndex {
             return String::new();
         }
 
+        // Sort by name for deterministic output
+        let mut sorted: Vec<_> = self.skills.values().collect();
+        sorted.sort_by_key(|m| &m.name);
+
         let mut lines = vec!["Available skill packs:".to_string()];
 
-        for (count, meta) in self.skills.values().enumerate() {
+        for (count, meta) in sorted.into_iter().enumerate() {
             if count >= max_entries {
                 let remaining = self.skills.len() - max_entries;
                 lines.push(format!("  (+{} more; use /skillpacks to view)", remaining));

@@ -8,7 +8,7 @@ pub fn schema() -> Value {
         "type": "function",
         "function": {
             "name": "ActivateSkill",
-            "description": "Activate a skill pack to gain specialized instructions and optionally restrict available tools. Use when the task matches a skill's description. View available skills in the 'Available skill packs' section of the system prompt.",
+            "description": "Activate a skill pack to gain specialized instructions and optionally restrict available tools. Use when the task matches a skill's description. View available skills in the 'Available skill packs:' section of the system prompt.",
             "parameters": {
                 "type": "object",
                 "properties": {

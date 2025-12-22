@@ -84,14 +84,11 @@ impl ActiveSkills {
             .filter_map(|p| p.allowed_tools.as_ref())
             .collect();
 
-        if restrictions.is_empty() {
-            return None;
-        }
-
         // Start with first set, intersect with rest
-        let mut effective: HashSet<&String> = restrictions[0].iter().collect();
+        let first = restrictions.first()?;
+        let mut effective: HashSet<&String> = first.iter().collect();
 
-        for r in &restrictions[1..] {
+        for r in restrictions.iter().skip(1) {
             let other: HashSet<&String> = r.iter().collect();
             effective = effective.intersection(&other).cloned().collect();
         }
