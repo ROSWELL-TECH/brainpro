@@ -19,10 +19,6 @@ pub struct Usage {
     pub prompt_tokens: u64,
     #[serde(default)]
     pub completion_tokens: u64,
-    /// Total tokens from API (may be redundant with prompt_tokens + completion_tokens)
-    #[serde(default)]
-    #[allow(dead_code)]
-    pub total_tokens: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,7 +31,6 @@ pub struct ChatResponse {
 #[derive(Debug, Deserialize)]
 pub struct Choice {
     pub message: Message,
-    #[allow(dead_code)]
     pub finish_reason: Option<String>,
 }
 
@@ -62,6 +57,11 @@ pub struct FunctionCall {
     pub arguments: String,
 }
 
+/// Trait for LLM clients to allow mocking and abstraction
+pub trait LlmClient {
+    fn chat(&self, request: &ChatRequest) -> Result<ChatResponse>;
+}
+
 pub struct Client {
     base_url: String,
     api_key: String,
@@ -76,8 +76,10 @@ impl Client {
             agent: ureq::Agent::new(),
         }
     }
+}
 
-    pub fn chat(&self, request: &ChatRequest) -> Result<ChatResponse> {
+impl LlmClient for Client {
+    fn chat(&self, request: &ChatRequest) -> Result<ChatResponse> {
         let url = format!("{}/chat/completions", self.base_url);
 
         let resp = self

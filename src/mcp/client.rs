@@ -1,12 +1,11 @@
 //! MCP JSON-RPC client for protocol communication.
 
-use super::transport::StdioTransport;
+use super::transport::McpTransportImpl;
 use super::McpToolDef;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Duration;
 
 /// JSON-RPC request structure
 #[derive(Serialize)]
@@ -21,9 +20,6 @@ struct JsonRpcRequest {
 /// JSON-RPC response structure
 #[derive(Deserialize)]
 struct JsonRpcResponse {
-    #[allow(dead_code)]
-    jsonrpc: String,
-    id: Option<u64>,
     result: Option<Value>,
     error: Option<JsonRpcError>,
 }
@@ -37,18 +33,16 @@ struct JsonRpcError {
 
 /// MCP client for communicating with an MCP server
 pub struct McpClient {
-    transport: StdioTransport,
+    transport: McpTransportImpl,
     request_id: AtomicU64,
-    timeout: Duration,
 }
 
 impl McpClient {
-    /// Create a new MCP client wrapping a transport
-    pub fn new(transport: StdioTransport, timeout_ms: u64) -> Self {
+    /// Create a new MCP client with any transport type
+    pub fn with_transport(transport: McpTransportImpl) -> Self {
         Self {
             transport,
             request_id: AtomicU64::new(1),
-            timeout: Duration::from_millis(timeout_ms),
         }
     }
 
@@ -67,25 +61,17 @@ impl McpClient {
             params,
         };
 
-        self.transport.send(&serde_json::to_value(&request)?)?;
+        let response_value = self.transport.send(&serde_json::to_value(&request)?)?;
+        let response: JsonRpcResponse = serde_json::from_value(response_value)?;
 
-        // Wait for response with matching ID
-        loop {
-            let response_value = self.transport.recv_timeout(self.timeout)?;
-            let response: JsonRpcResponse = serde_json::from_value(response_value)?;
-
-            if response.id == Some(id) {
-                if let Some(error) = response.error {
-                    return Err(anyhow::anyhow!(
-                        "MCP error {}: {}",
-                        error.code,
-                        error.message
-                    ));
-                }
-                return Ok(response.result.unwrap_or(Value::Null));
-            }
-            // Ignore notifications or responses for other requests
+        if let Some(error) = response.error {
+            return Err(anyhow::anyhow!(
+                "MCP error {}: {}",
+                error.code,
+                error.message
+            ));
         }
+        Ok(response.result.unwrap_or(Value::Null))
     }
 
     /// Perform MCP initialize handshake
@@ -102,11 +88,14 @@ impl McpClient {
         let result = self.call("initialize", Some(params))?;
 
         // Send initialized notification (no response expected)
+        // For HTTP/SSE this is a fire-and-forget, but log errors for debugging
         let notification = json!({
             "jsonrpc": "2.0",
             "method": "notifications/initialized"
         });
-        self.transport.send(&notification)?;
+        if let Err(e) = self.transport.send(&notification) {
+            eprintln!("MCP: Failed to send initialized notification: {}", e);
+        }
 
         Ok(result)
     }

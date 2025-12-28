@@ -1,22 +1,41 @@
+use super::SchemaOptions;
 use serde_json::{json, Value};
 use std::path::Path;
 
-pub fn schema() -> Value {
-    json!({
-        "type": "function",
-        "function": {
-            "name": "Glob",
-            "description": "Find files matching glob pattern. Skips .git, target, .yo dirs.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "pattern": { "type": "string", "description": "Glob pattern (e.g. **/*.rs)" },
-                    "max_results": { "type": "integer", "description": "Max files (default 2000)" }
-                },
-                "required": ["pattern"]
+pub fn schema(opts: &SchemaOptions) -> Value {
+    if opts.optimize {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Glob",
+                "description": "Find files by pattern",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": { "type": "string" },
+                        "max_results": { "type": "integer" }
+                    },
+                    "required": ["pattern"]
+                }
             }
-        }
-    })
+        })
+    } else {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Glob",
+                "description": "Find files matching glob pattern. Skips .git, target, .yo dirs.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": { "type": "string", "description": "Glob pattern (e.g. **/*.rs)" },
+                        "max_results": { "type": "integer", "description": "Max files (default 2000)" }
+                    },
+                    "required": ["pattern"]
+                }
+            }
+        })
+    }
 }
 
 pub fn execute(args: Value, root: &Path) -> anyhow::Result<Value> {

@@ -2,7 +2,7 @@
 
 use crate::{
     cli::Context,
-    llm,
+    llm::{self, LlmClient},
     plan::{self, PlanPhase},
     policy::Decision,
     tools,
@@ -34,6 +34,15 @@ impl CommandStats {
     }
 }
 
+/// Result of a turn, including stats and continuation info
+#[derive(Debug, Default, Clone)]
+pub struct TurnResult {
+    pub stats: CommandStats,
+    /// If true, a Stop hook requested continuation with the given prompt
+    pub force_continue: bool,
+    pub continue_prompt: Option<String>,
+}
+
 const SYSTEM_PROMPT: &str = r#"You are an agentic coding assistant running locally.
 You can only access files via tools. All paths are relative to the project root.
 Use Glob/Grep to find files before Read. Before Edit/Write, explain what you will change.
@@ -53,12 +62,8 @@ fn verbose(ctx: &Context, message: &str) {
     }
 }
 
-pub fn run_turn(
-    ctx: &Context,
-    user_input: &str,
-    messages: &mut Vec<Value>,
-) -> Result<CommandStats> {
-    let mut stats = CommandStats::default();
+pub fn run_turn(ctx: &Context, user_input: &str, messages: &mut Vec<Value>) -> Result<TurnResult> {
+    let mut result = TurnResult::default();
     let _ = ctx.transcript.borrow_mut().user_message(user_input);
 
     messages.push(json!({
@@ -111,9 +116,10 @@ pub fn run_turn(
     }
 
     // Get built-in tool schemas (including Task for main agent) and add MCP tools
+    let schema_opts = tools::SchemaOptions::new(ctx.args.optimize);
     let mut tool_schemas = if in_planning_mode {
         // In planning mode, only provide read-only tools
-        tools::schemas()
+        tools::schemas(&schema_opts)
             .into_iter()
             .filter(|schema| {
                 if let Some(name) = schema
@@ -128,7 +134,7 @@ pub fn run_turn(
             })
             .collect()
     } else {
-        tools::schemas_with_task()
+        tools::schemas_with_task(&schema_opts)
     };
 
     // Only add MCP tools if not in planning mode
@@ -187,6 +193,11 @@ pub fn run_turn(
                 SYSTEM_PROMPT.to_string()
             };
 
+            // Add optimization mode instructions if -O flag is set
+            if ctx.args.optimize {
+                system_prompt.push_str("\n\nAI-to-AI mode. Maximum information density. Structure over prose. No narration.");
+            }
+
             // Add skill pack index
             let skill_index = ctx.skill_index.borrow();
             let skill_prompt = skill_index.format_for_prompt(50);
@@ -222,8 +233,25 @@ pub fn run_turn(
 
         // Track token usage from this LLM call
         if let Some(usage) = &response.usage {
-            stats.input_tokens += usage.prompt_tokens;
-            stats.output_tokens += usage.completion_tokens;
+            result.stats.input_tokens += usage.prompt_tokens;
+            result.stats.output_tokens += usage.completion_tokens;
+
+            // Record cost for this operation
+            let turn_number = *ctx.turn_counter.borrow();
+            let op = ctx.session_costs.borrow_mut().record_operation(
+                turn_number,
+                &target.model,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+            );
+
+            // Log token usage to transcript
+            let _ = ctx.transcript.borrow_mut().token_usage(
+                &target.model,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                op.cost_usd,
+            );
         }
 
         if response.choices.is_empty() {
@@ -233,6 +261,13 @@ pub fn run_turn(
 
         let choice = &response.choices[0];
         let msg = &choice.message;
+
+        // Warn if response was truncated due to length limit
+        if choice.finish_reason.as_deref() == Some("length") {
+            eprintln!(
+                "⚠️  Response truncated (max tokens reached). Consider increasing max_tokens or using /compact."
+            );
+        }
 
         if let Some(content) = &msg.content {
             if !content.is_empty() {
@@ -311,7 +346,7 @@ pub fn run_turn(
             let args: Value = serde_json::from_str(&tc.function.arguments).unwrap_or(json!({}));
 
             // Count this tool use
-            stats.tool_uses += 1;
+            result.stats.tool_uses += 1;
 
             trace(
                 ctx,
@@ -411,9 +446,9 @@ pub fn run_turn(
                     }
                 } else if name == "Task" {
                     // Execute Task tool (subagent delegation)
-                    let (result, sub_stats) = tools::task::execute(args.clone(), ctx)?;
-                    stats.merge(&sub_stats);
-                    result
+                    let (task_result, sub_stats) = tools::task::execute(args.clone(), ctx)?;
+                    result.stats.merge(&sub_stats);
+                    task_result
                 } else if name.starts_with("mcp.") {
                     // Execute MCP tool
                     let start = std::time::Instant::now();
@@ -508,8 +543,28 @@ pub fn run_turn(
         }
     }
 
-    // Run Stop hooks (note: force_continue not implemented yet)
-    let _ = ctx.hooks.borrow().on_stop("end_turn", None);
+    // Run Stop hooks - may request continuation
+    let last_assistant_message = messages.iter().rev().find_map(|m| {
+        if m["role"].as_str() == Some("assistant") {
+            m["content"].as_str().map(|s| s.to_string())
+        } else {
+            None
+        }
+    });
 
-    Ok(stats)
+    let (force_continue, continue_prompt) = ctx
+        .hooks
+        .borrow()
+        .on_stop("end_turn", last_assistant_message.as_deref());
+
+    // If force_continue is requested, signal to caller to run another turn
+    if force_continue {
+        if let Some(prompt) = continue_prompt {
+            result.force_continue = true;
+            result.continue_prompt = Some(prompt);
+            verbose(ctx, "Stop hook requested continuation");
+        }
+    }
+
+    Ok(result)
 }

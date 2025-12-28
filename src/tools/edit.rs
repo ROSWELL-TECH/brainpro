@@ -1,34 +1,63 @@
-use super::{sha256, validate_path};
+use super::{sha256, validate_path, SchemaOptions};
 use serde_json::{json, Value};
 use std::path::Path;
 
-pub fn schema() -> Value {
-    json!({
-        "type": "function",
-        "function": {
-            "name": "Edit",
-            "description": "Edit file with find/replace. Requires permission.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": { "type": "string", "description": "File path relative to root" },
-                    "edits": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "find": { "type": "string" },
-                                "replace": { "type": "string" },
-                                "count": { "type": "integer", "description": "Times to replace (0=all, default 1)" }
-                            },
-                            "required": ["find", "replace"]
+pub fn schema(opts: &SchemaOptions) -> Value {
+    if opts.optimize {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Edit",
+                "description": "Edit file: find→replace",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string" },
+                        "edits": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "find": { "type": "string" },
+                                    "replace": { "type": "string" },
+                                    "count": { "type": "integer", "description": "0=all, default 1" }
+                                },
+                                "required": ["find", "replace"]
+                            }
                         }
-                    }
-                },
-                "required": ["path", "edits"]
+                    },
+                    "required": ["path", "edits"]
+                }
             }
-        }
-    })
+        })
+    } else {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Edit",
+                "description": "Edit file with find/replace. Requires permission.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string", "description": "File path relative to root" },
+                        "edits": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "find": { "type": "string" },
+                                    "replace": { "type": "string" },
+                                    "count": { "type": "integer", "description": "Times to replace (0=all, default 1)" }
+                                },
+                                "required": ["find", "replace"]
+                            }
+                        }
+                    },
+                    "required": ["path", "edits"]
+                }
+            }
+        })
+    }
 }
 
 pub fn execute(args: Value, root: &Path) -> anyhow::Result<Value> {

@@ -3,6 +3,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+/// A validation error in the configuration
+#[derive(Debug, Clone)]
+pub struct ValidationError {
+    pub field: String,
+    pub message: String,
+}
+
+impl std::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]: {}", self.field, self.message)
+    }
+}
+
 /// Permission mode for tool calls
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,10 +95,23 @@ pub struct BashConfig {
     pub max_output_bytes: Option<usize>,
 }
 
+/// MCP transport type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum McpTransport {
+    #[default]
+    Stdio,
+    Http,
+    Sse,
+}
+
 /// Configuration for an MCP server
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpServerConfig {
+    /// For stdio: the command to spawn
+    /// For http/sse: not used (use url instead)
+    #[serde(default)]
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
@@ -99,6 +125,12 @@ pub struct McpServerConfig {
     pub auto_start: bool,
     #[serde(default = "default_timeout_ms")]
     pub timeout_ms: u64,
+    /// Transport type: stdio, http, or sse
+    #[serde(default)]
+    pub transport: McpTransport,
+    /// URL for http/sse transports
+    #[serde(default)]
+    pub url: Option<String>,
 }
 
 fn default_cwd() -> String {
@@ -288,6 +320,7 @@ impl BackendConfig {
     }
 }
 
+use crate::cost::{CostConfig, ModelPricing};
 use crate::model_routing::ModelRoutingConfig;
 
 /// Main configuration structure
@@ -309,6 +342,10 @@ pub struct Config {
     pub model_routing: ModelRoutingConfig,
     #[serde(default)]
     pub hooks: Vec<HookConfig>,
+    #[serde(default)]
+    pub cost_tracking: CostConfig,
+    #[serde(default)]
+    pub model_pricing: HashMap<String, ModelPricing>,
     #[serde(skip)]
     pub agents: HashMap<String, AgentSpec>,
 }
@@ -364,6 +401,8 @@ impl Config {
             mcp: McpConfig::default(),
             model_routing: ModelRoutingConfig::default(),
             hooks: Vec::new(),
+            cost_tracking: CostConfig::default(),
+            model_pricing: HashMap::new(),
             agents: HashMap::new(),
         }
     }
@@ -462,6 +501,14 @@ impl Config {
 
         // Merge hooks (concatenate)
         self.hooks.extend(other.hooks);
+
+        // Merge cost tracking (take other's values)
+        self.cost_tracking = other.cost_tracking;
+
+        // Merge model pricing (other takes priority)
+        for (model, pricing) in other.model_pricing {
+            self.model_pricing.insert(model, pricing);
+        }
     }
 
     /// Get the default target
@@ -507,6 +554,99 @@ impl Config {
     /// Check if config has any backends defined
     pub fn has_backends(&self) -> bool {
         !self.backends.is_empty()
+    }
+
+    /// Validate configuration and return any errors found
+    pub fn validate(&self) -> Result<(), Vec<ValidationError>> {
+        let mut errors = Vec::new();
+
+        // Validate default_target format if set
+        if let Some(target) = &self.default_target {
+            if Target::parse(target).is_none() {
+                errors.push(ValidationError {
+                    field: "default_target".to_string(),
+                    message: format!(
+                        "Invalid target format '{}', expected 'model@backend'",
+                        target
+                    ),
+                });
+            }
+        }
+
+        // Validate context.auto_compact_threshold range
+        if !(0.0..=1.0).contains(&self.context.auto_compact_threshold) {
+            errors.push(ValidationError {
+                field: "context.auto_compact_threshold".to_string(),
+                message: format!(
+                    "Must be between 0.0 and 1.0, got {}",
+                    self.context.auto_compact_threshold
+                ),
+            });
+        }
+
+        // Validate agent specs
+        for (name, spec) in &self.agents {
+            if spec.max_turns == 0 {
+                errors.push(ValidationError {
+                    field: format!("agents.{}.max_turns", name),
+                    message: "Must be greater than 0".to_string(),
+                });
+            }
+            // Validate permission_mode is recognized
+            if PermissionMode::from_str(&spec.permission_mode).is_none() {
+                errors.push(ValidationError {
+                    field: format!("agents.{}.permission_mode", name),
+                    message: format!("Invalid permission mode '{}'", spec.permission_mode),
+                });
+            }
+        }
+
+        // Validate hook matchers are valid regex
+        for (i, hook) in self.hooks.iter().enumerate() {
+            if let Some(matcher) = &hook.matcher {
+                if regex::Regex::new(matcher).is_err() {
+                    errors.push(ValidationError {
+                        field: format!("hooks[{}].matcher", i),
+                        message: format!("Invalid regex pattern '{}'", matcher),
+                    });
+                }
+            }
+            // Validate hook command is not empty
+            if hook.command.is_empty() {
+                errors.push(ValidationError {
+                    field: format!("hooks[{}].command", i),
+                    message: "Command must not be empty".to_string(),
+                });
+            }
+        }
+
+        // Validate MCP server configs based on transport type
+        for (name, server) in &self.mcp.servers {
+            match server.transport {
+                McpTransport::Stdio => {
+                    if server.command.is_empty() {
+                        errors.push(ValidationError {
+                            field: format!("mcp.servers.{}.command", name),
+                            message: "Command required for stdio transport".to_string(),
+                        });
+                    }
+                }
+                McpTransport::Http | McpTransport::Sse => {
+                    if server.url.is_none() {
+                        errors.push(ValidationError {
+                            field: format!("mcp.servers.{}.url", name),
+                            message: "URL required for http/sse transport".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
     }
 
     /// Save permissions to local config file (.yo/config.local.toml)
@@ -564,5 +704,59 @@ mod tests {
             backend: "chatgpt".to_string(),
         };
         assert_eq!(format!("{}", target), "gpt-4@chatgpt");
+    }
+
+    #[test]
+    fn test_validate_valid_config() {
+        let config = Config::with_builtin_backends();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_invalid_target() {
+        let mut config = Config::with_builtin_backends();
+        config.default_target = Some("no-backend".to_string());
+        let errors = config.validate().unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert!(errors[0].field.contains("default_target"));
+    }
+
+    #[test]
+    fn test_validate_invalid_threshold() {
+        let mut config = Config::with_builtin_backends();
+        config.context.auto_compact_threshold = 1.5;
+        let errors = config.validate().unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert!(errors[0].field.contains("auto_compact_threshold"));
+        assert!(errors[0].message.contains("between 0.0 and 1.0"));
+    }
+
+    #[test]
+    fn test_validate_invalid_hook_regex() {
+        let mut config = Config::with_builtin_backends();
+        config.hooks.push(HookConfig {
+            event: HookEvent::PreToolUse,
+            command: vec!["echo".to_string(), "test".to_string()],
+            matcher: Some("[invalid regex".to_string()),
+            timeout_ms: 1000,
+        });
+        let errors = config.validate().unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert!(errors[0].field.contains("hooks"));
+        assert!(errors[0].message.contains("Invalid regex"));
+    }
+
+    #[test]
+    fn test_validate_empty_hook_command() {
+        let mut config = Config::with_builtin_backends();
+        config.hooks.push(HookConfig {
+            event: HookEvent::Stop,
+            command: vec![],
+            matcher: None,
+            timeout_ms: 1000,
+        });
+        let errors = config.validate().unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert!(errors[0].message.contains("empty"));
     }
 }

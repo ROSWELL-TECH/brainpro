@@ -1,24 +1,43 @@
-use super::{sha256, validate_path};
+use super::{sha256, validate_path, SchemaOptions};
 use serde_json::{json, Value};
 use std::path::Path;
 
-pub fn schema() -> Value {
-    json!({
-        "type": "function",
-        "function": {
-            "name": "Read",
-            "description": "Read file content. Paths relative to project root.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": { "type": "string", "description": "File path relative to root" },
-                    "max_bytes": { "type": "integer", "description": "Max bytes to read (default 65536)" },
-                    "offset": { "type": "integer", "description": "Byte offset to start from (default 0)" }
-                },
-                "required": ["path"]
+pub fn schema(opts: &SchemaOptions) -> Value {
+    if opts.optimize {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Read",
+                "description": "Read file",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string" },
+                        "max_bytes": { "type": "integer" },
+                        "offset": { "type": "integer" }
+                    },
+                    "required": ["path"]
+                }
             }
-        }
-    })
+        })
+    } else {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Read",
+                "description": "Read file content. Paths relative to project root.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string", "description": "File path relative to root" },
+                        "max_bytes": { "type": "integer", "description": "Max bytes to read (default 65536)" },
+                        "offset": { "type": "integer", "description": "Byte offset to start from (default 0)" }
+                    },
+                    "required": ["path"]
+                }
+            }
+        })
+    }
 }
 
 pub fn execute(args: Value, root: &Path) -> anyhow::Result<Value> {
