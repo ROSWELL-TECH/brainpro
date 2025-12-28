@@ -23,33 +23,54 @@ struct BashArgs {
     cwd: Option<String>,
 }
 
+use super::SchemaOptions;
+
 /// Returns the JSON schema for the Bash tool
-pub fn schema() -> Value {
-    json!({
-        "type": "function",
-        "function": {
-            "name": "Bash",
-            "description": "Execute a shell command in the project directory. Commands are parsed as shell words (not passed to sh -c). Returns stdout, stderr, and exit code. Use for builds, tests, git operations, etc.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "command": {
-                        "type": "string",
-                        "description": "The command to execute (parsed as shell words)"
+pub fn schema(opts: &SchemaOptions) -> Value {
+    if opts.optimize {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Bash",
+                "description": "Run shell command",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": { "type": "string" },
+                        "timeout_ms": { "type": "integer" },
+                        "cwd": { "type": "string" }
                     },
-                    "timeout_ms": {
-                        "type": "integer",
-                        "description": "Timeout in milliseconds (default 120000, max 600000)"
-                    },
-                    "cwd": {
-                        "type": "string",
-                        "description": "Working directory relative to project root (default: project root)"
-                    }
-                },
-                "required": ["command"]
+                    "required": ["command"]
+                }
             }
-        }
-    })
+        })
+    } else {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Bash",
+                "description": "Execute a shell command in the project directory. Commands are parsed as shell words (not passed to sh -c). Returns stdout, stderr, and exit code. Use for builds, tests, git operations, etc.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The command to execute (parsed as shell words)"
+                        },
+                        "timeout_ms": {
+                            "type": "integer",
+                            "description": "Timeout in milliseconds (default 120000, max 600000)"
+                        },
+                        "cwd": {
+                            "type": "string",
+                            "description": "Working directory relative to project root (default: project root)"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
+        })
+    }
 }
 
 /// Execute the Bash tool
@@ -216,8 +237,19 @@ mod tests {
 
     #[test]
     fn test_schema() {
-        let schema = schema();
+        let opts = SchemaOptions::default();
+        let schema = schema(&opts);
         assert_eq!(schema["function"]["name"], "Bash");
+    }
+
+    #[test]
+    fn test_schema_optimized() {
+        let opts = SchemaOptions::new(true);
+        let schema = schema(&opts);
+        assert_eq!(schema["function"]["name"], "Bash");
+        // Optimized schema should have shorter description
+        let desc = schema["function"]["description"].as_str().unwrap();
+        assert_eq!(desc, "Run shell command");
     }
 
     #[test]

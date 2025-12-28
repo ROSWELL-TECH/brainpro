@@ -111,9 +111,10 @@ pub fn run_turn(
     }
 
     // Get built-in tool schemas (including Task for main agent) and add MCP tools
+    let schema_opts = tools::SchemaOptions::new(ctx.args.optimize);
     let mut tool_schemas = if in_planning_mode {
         // In planning mode, only provide read-only tools
-        tools::schemas()
+        tools::schemas(&schema_opts)
             .into_iter()
             .filter(|schema| {
                 if let Some(name) = schema
@@ -128,7 +129,7 @@ pub fn run_turn(
             })
             .collect()
     } else {
-        tools::schemas_with_task()
+        tools::schemas_with_task(&schema_opts)
     };
 
     // Only add MCP tools if not in planning mode
@@ -189,7 +190,7 @@ pub fn run_turn(
 
             // Add optimization mode instructions if -O flag is set
             if ctx.args.optimize {
-                system_prompt.push_str("\n\nOPTIMIZATION MODE: Generate terse, precise output optimized for AI agent consumption. Minimize tokens while maximizing information density. Omit pleasantries, verbose explanations, and redundant context. Every token must earn its place.");
+                system_prompt.push_str("\n\nAI-to-AI mode. Maximum information density. Structure over prose. No narration.");
             }
 
             // Add skill pack index

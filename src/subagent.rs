@@ -79,8 +79,11 @@ pub fn clamp_mode(requested: PermissionMode, parent: PermissionMode) -> Permissi
 use crate::tool_filter;
 
 /// Filter tool schemas to only include allowed tools
-pub fn filter_tool_schemas(allowed_tools: &[String]) -> Vec<Value> {
-    let all_schemas = tools::schemas();
+pub fn filter_tool_schemas(
+    allowed_tools: &[String],
+    schema_opts: &tools::SchemaOptions,
+) -> Vec<Value> {
+    let all_schemas = tools::schemas(schema_opts);
 
     all_schemas
         .into_iter()
@@ -197,7 +200,9 @@ pub fn run_subagent(
 
     // Add optimization mode instructions if -O flag is set
     if ctx.args.optimize {
-        system_prompt.push_str("\n\nOPTIMIZATION MODE: Generate terse, precise output optimized for AI agent consumption. Minimize tokens while maximizing information density. Omit pleasantries, verbose explanations, and redundant context. Every token must earn its place.");
+        system_prompt.push_str(
+            "\n\nAI-to-AI mode. Maximum information density. Structure over prose. No narration.",
+        );
     }
 
     // Build initial messages
@@ -223,7 +228,8 @@ pub fn run_subagent(
     }));
 
     // Get filtered tool schemas
-    let tool_schemas = filter_tool_schemas(&spec.allowed_tools);
+    let schema_opts = tools::SchemaOptions::new(ctx.args.optimize);
+    let tool_schemas = filter_tool_schemas(&spec.allowed_tools, &schema_opts);
 
     // Also add allowed MCP tools if any
     let mut all_tool_schemas = tool_schemas;

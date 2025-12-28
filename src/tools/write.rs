@@ -1,24 +1,43 @@
-use super::{sha256, validate_path};
+use super::{sha256, validate_path, SchemaOptions};
 use serde_json::{json, Value};
 use std::path::Path;
 
-pub fn schema() -> Value {
-    json!({
-        "type": "function",
-        "function": {
-            "name": "Write",
-            "description": "Create or overwrite a file. Requires permission.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": { "type": "string", "description": "File path relative to root" },
-                    "content": { "type": "string", "description": "Content to write" },
-                    "overwrite": { "type": "boolean", "description": "Allow overwrite (default true)" }
-                },
-                "required": ["path", "content"]
+pub fn schema(opts: &SchemaOptions) -> Value {
+    if opts.optimize {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Write",
+                "description": "Write file",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string" },
+                        "content": { "type": "string" },
+                        "overwrite": { "type": "boolean" }
+                    },
+                    "required": ["path", "content"]
+                }
             }
-        }
-    })
+        })
+    } else {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Write",
+                "description": "Create or overwrite a file. Requires permission.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string", "description": "File path relative to root" },
+                        "content": { "type": "string", "description": "Content to write" },
+                        "overwrite": { "type": "boolean", "description": "Allow overwrite (default true)" }
+                    },
+                    "required": ["path", "content"]
+                }
+            }
+        })
+    }
 }
 
 pub fn execute(args: Value, root: &Path) -> anyhow::Result<Value> {

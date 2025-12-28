@@ -1,53 +1,86 @@
 //! Task tool for delegating work to subagents.
 
+use super::SchemaOptions;
 use crate::agent::CommandStats;
 use crate::cli::Context;
 use crate::subagent::{self, InputContext, SubagentResult};
 use serde_json::{json, Value};
 
-pub fn schema() -> Value {
-    json!({
-        "type": "function",
-        "function": {
-            "name": "Task",
-            "description": "Delegate a task to a specialized subagent. Use /agents to see available agents.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "agent": {
-                        "type": "string",
-                        "description": "Name of the subagent to delegate to (e.g., 'scout', 'patch', 'test', 'docs')"
-                    },
-                    "prompt": {
-                        "type": "string",
-                        "description": "Task description for the subagent"
-                    },
-                    "input_context": {
-                        "type": "object",
-                        "description": "Optional context to provide to the subagent",
-                        "properties": {
-                            "files": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": { "type": "string", "description": "File path hint for the subagent" }
-                                    },
-                                    "required": ["path"]
+pub fn schema(opts: &SchemaOptions) -> Value {
+    if opts.optimize {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Task",
+                "description": "Delegate to subagent",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent": { "type": "string" },
+                        "prompt": { "type": "string" },
+                        "input_context": {
+                            "type": "object",
+                            "properties": {
+                                "files": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": { "path": { "type": "string" } },
+                                        "required": ["path"]
+                                    }
                                 },
-                                "description": "File paths to hint to the subagent (it can use Read tool to access them)"
-                            },
-                            "notes": {
-                                "type": "string",
-                                "description": "Additional notes for the subagent"
+                                "notes": { "type": "string" }
                             }
                         }
-                    }
-                },
-                "required": ["agent", "prompt"]
+                    },
+                    "required": ["agent", "prompt"]
+                }
             }
-        }
-    })
+        })
+    } else {
+        json!({
+            "type": "function",
+            "function": {
+                "name": "Task",
+                "description": "Delegate a task to a specialized subagent. Use /agents to see available agents.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "agent": {
+                            "type": "string",
+                            "description": "Name of the subagent to delegate to (e.g., 'scout', 'patch', 'test', 'docs')"
+                        },
+                        "prompt": {
+                            "type": "string",
+                            "description": "Task description for the subagent"
+                        },
+                        "input_context": {
+                            "type": "object",
+                            "description": "Optional context to provide to the subagent",
+                            "properties": {
+                                "files": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "path": { "type": "string", "description": "File path hint for the subagent" }
+                                        },
+                                        "required": ["path"]
+                                    },
+                                    "description": "File paths to hint to the subagent (it can use Read tool to access them)"
+                                },
+                                "notes": {
+                                    "type": "string",
+                                    "description": "Additional notes for the subagent"
+                                }
+                            }
+                        }
+                    },
+                    "required": ["agent", "prompt"]
+                }
+            }
+        })
+    }
 }
 
 /// Execute the Task tool - delegates to a subagent

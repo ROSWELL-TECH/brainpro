@@ -13,29 +13,42 @@ use anyhow::Result;
 use serde_json::{json, Value};
 use std::path::Path;
 
+/// Configuration for schema generation
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SchemaOptions {
+    /// Generate terse schemas optimized for token efficiency
+    pub optimize: bool,
+}
+
+impl SchemaOptions {
+    pub fn new(optimize: bool) -> Self {
+        Self { optimize }
+    }
+}
+
 /// Get all built-in tool schemas (excluding Task - used by subagents)
-pub fn schemas() -> Vec<Value> {
+pub fn schemas(opts: &SchemaOptions) -> Vec<Value> {
     vec![
-        read::schema(),
-        write::schema(),
-        edit::schema(),
-        grep::schema(),
-        glob::schema(),
-        bash::schema(),
+        read::schema(opts),
+        write::schema(opts),
+        edit::schema(opts),
+        grep::schema(opts),
+        glob::schema(opts),
+        bash::schema(opts),
     ]
 }
 
 /// Get all tool schemas including Task and ActivateSkill (used by main agent)
-pub fn schemas_with_task() -> Vec<Value> {
+pub fn schemas_with_task(opts: &SchemaOptions) -> Vec<Value> {
     vec![
-        read::schema(),
-        write::schema(),
-        edit::schema(),
-        grep::schema(),
-        glob::schema(),
-        bash::schema(),
-        task::schema(),
-        activate_skill::schema(),
+        read::schema(opts),
+        write::schema(opts),
+        edit::schema(opts),
+        grep::schema(opts),
+        glob::schema(opts),
+        bash::schema(opts),
+        task::schema(opts),
+        activate_skill::schema(opts),
     ]
 }
 
