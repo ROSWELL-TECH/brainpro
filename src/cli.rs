@@ -6,6 +6,7 @@ use crate::{
     config::Target,
     mcp::manager::McpManager,
     model_routing::ModelRouter,
+    plan::{self, PlanModeState},
     policy::PolicyEngine,
     skillpacks::{ActiveSkills, SkillIndex},
     transcript::Transcript,
@@ -40,6 +41,7 @@ pub struct Context {
     pub skill_index: RefCell<SkillIndex>,
     pub active_skills: RefCell<ActiveSkills>,
     pub model_router: RefCell<ModelRouter>,
+    pub plan_mode: RefCell<PlanModeState>,
 }
 
 /// Print command stats to stderr
@@ -153,6 +155,16 @@ fn handle_command(ctx: &Context, cmd: &str, messages: &mut Vec<serde_json::Value
             println!("  /skillpack use <name>  - activate skill");
             println!("  /skillpack drop <name> - deactivate skill");
             println!("  /skillpack active      - list active skills");
+            println!("Plan Mode:");
+            println!("  /plan <task>           - enter plan mode with a task");
+            println!("  /plan                  - show current plan or help");
+            println!("  /plan execute          - execute current plan step-by-step");
+            println!("  /plan save [name]      - save plan to .yo/plans/");
+            println!("  /plan cancel           - discard current plan");
+            println!("  /plan list             - list saved plans");
+            println!("  /plan load <name>      - load a saved plan");
+            println!("  /plan run <name>       - load and execute a saved plan");
+            println!("  /plan delete <name>    - delete a saved plan");
         }
         "/session" => {
             println!("Session: {}", ctx.session_id);
@@ -246,6 +258,9 @@ fn handle_command(ctx: &Context, cmd: &str, messages: &mut Vec<serde_json::Value
         }
         "/skillpack" => {
             handle_skillpack_command(ctx, if parts.len() > 1 { parts[1] } else { "" });
+        }
+        "/plan" => {
+            handle_plan_command(ctx, if parts.len() > 1 { parts[1] } else { "" }, messages);
         }
         _ => println!("Unknown command: {}", parts[0]),
     }
@@ -602,6 +617,408 @@ fn handle_skillpack_command(ctx: &Context, args: &str) {
         }
         _ => {
             println!("Unknown subcommand. Use: show, use, drop, active");
+        }
+    }
+}
+
+fn handle_plan_command(ctx: &Context, args: &str, messages: &mut Vec<serde_json::Value>) {
+    let parts: Vec<&str> = args.splitn(2, ' ').collect();
+    let subcommand = parts.first().copied().unwrap_or("");
+
+    match subcommand {
+        "" => {
+            // Show current plan status or help
+            let state = ctx.plan_mode.borrow();
+            if state.active {
+                if let Some(plan) = &state.current_plan {
+                    println!("{}", plan.format_display());
+                    println!("Options:");
+                    println!("  /plan execute  - execute the plan step-by-step");
+                    println!("  /plan save     - save plan to .yo/plans/");
+                    println!("  /plan cancel   - discard current plan");
+                }
+            } else {
+                println!("Plan Mode Commands:");
+                println!("  /plan <task>        - enter plan mode with a task");
+                println!("  /plan execute       - execute the current plan");
+                println!("  /plan save [name]   - save plan to .yo/plans/");
+                println!("  /plan cancel        - discard current plan");
+                println!("  /plan list          - list saved plans");
+                println!("  /plan load <name>   - load a saved plan");
+                println!("  /plan run <name>    - load and execute a plan");
+                println!("  /plan delete <name> - delete a saved plan");
+            }
+        }
+
+        "execute" => {
+            handle_plan_execute(ctx, messages);
+        }
+
+        "save" => {
+            let name = parts.get(1).map(|s| s.trim());
+            handle_plan_save(ctx, name);
+        }
+
+        "cancel" => {
+            handle_plan_cancel(ctx);
+        }
+
+        "list" => {
+            handle_plan_list(ctx);
+        }
+
+        "load" => {
+            if let Some(name) = parts.get(1) {
+                handle_plan_load(ctx, name.trim());
+            } else {
+                println!("Usage: /plan load <name>");
+            }
+        }
+
+        "run" => {
+            if let Some(name) = parts.get(1) {
+                handle_plan_run(ctx, name.trim(), messages);
+            } else {
+                println!("Usage: /plan run <name>");
+            }
+        }
+
+        "delete" => {
+            if let Some(name) = parts.get(1) {
+                handle_plan_delete(ctx, name.trim());
+            } else {
+                println!("Usage: /plan delete <name>");
+            }
+        }
+
+        _ => {
+            // Treat as a task description - enter planning mode
+            let goal = args.to_string();
+            handle_plan_start(ctx, goal, messages);
+        }
+    }
+}
+
+fn handle_plan_start(ctx: &Context, goal: String, messages: &mut Vec<serde_json::Value>) {
+    if goal.is_empty() {
+        println!("Usage: /plan <task description>");
+        return;
+    }
+
+    // Check if already in plan mode
+    {
+        let state = ctx.plan_mode.borrow();
+        if state.active {
+            println!("Already in plan mode. Use /plan cancel to exit first.");
+            return;
+        }
+    }
+
+    // Enter planning mode
+    ctx.plan_mode.borrow_mut().enter_planning(goal.clone());
+    println!("[Plan Mode] Entering planning mode...");
+    println!("[Plan Mode] Goal: {}", goal);
+    println!("[Plan Mode] Using read-only tools to explore the codebase...\n");
+
+    // Log to transcript
+    let _ = ctx.transcript.borrow_mut().plan_mode_start(&goal);
+
+    // Run the planning turn
+    let start = Instant::now();
+    match agent::run_turn(ctx, &goal, messages) {
+        Ok(stats) => {
+            print_stats(start.elapsed(), &stats);
+
+            // Check if we got a plan
+            let state = ctx.plan_mode.borrow();
+            if let Some(plan) = &state.current_plan {
+                if !plan.steps.is_empty() {
+                    println!("\n{}", plan.format_display());
+                    println!("Options:");
+                    println!("  /plan execute  - execute the plan step-by-step");
+                    println!("  /plan save     - save plan to .yo/plans/");
+                    println!("  /plan cancel   - discard current plan");
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Planning error: {}", e);
+            ctx.plan_mode.borrow_mut().exit();
+        }
+    }
+}
+
+fn handle_plan_execute(ctx: &Context, messages: &mut Vec<serde_json::Value>) {
+    // Check if we have a plan to execute
+    {
+        let state = ctx.plan_mode.borrow();
+        if !state.active || state.current_plan.is_none() {
+            println!("No plan to execute. Use /plan <task> to create one, or /plan load <name> to load a saved plan.");
+            return;
+        }
+    }
+
+    // Enter executing phase
+    ctx.plan_mode.borrow_mut().enter_executing();
+    println!("[Plan Mode] Starting plan execution...\n");
+
+    // Execute steps one at a time
+    loop {
+        // Get next step
+        let next_step = {
+            let state = ctx.plan_mode.borrow();
+            state
+                .current_plan
+                .as_ref()
+                .and_then(|p| p.next_step())
+                .cloned()
+        };
+
+        let Some(step) = next_step else {
+            // All steps done
+            let state = ctx.plan_mode.borrow();
+            if let Some(plan) = &state.current_plan {
+                println!("\n[Plan Mode] Plan execution complete!");
+                println!(
+                    "  Completed: {}, Failed: {}",
+                    plan.completed_count(),
+                    plan.failed_count()
+                );
+
+                // Log completion
+                let _ = ctx.transcript.borrow_mut().plan_complete(
+                    &plan.name,
+                    plan.completed_count(),
+                    plan.failed_count(),
+                );
+            }
+            drop(state);
+            ctx.plan_mode.borrow_mut().enter_review();
+            return;
+        };
+
+        println!(
+            "=== Step {}: {} ===\n{}",
+            step.number, step.title, step.description
+        );
+        if !step.files.is_empty() {
+            println!("Files: {}", step.files.join(", "));
+        }
+        println!();
+
+        // Mark step as in progress
+        {
+            let mut state = ctx.plan_mode.borrow_mut();
+            if let Some(plan) = &mut state.current_plan {
+                if let Some(s) = plan.step_mut(step.number) {
+                    s.status = plan::PlanStepStatus::InProgress;
+                }
+            }
+        }
+
+        // Log step start
+        let plan_name = ctx
+            .plan_mode
+            .borrow()
+            .current_plan
+            .as_ref()
+            .map(|p| p.name.clone())
+            .unwrap_or_default();
+        let _ = ctx
+            .transcript
+            .borrow_mut()
+            .plan_step_start(&plan_name, step.number, &step.title);
+
+        // Build prompt for this step
+        let prompt = format!(
+            "Execute Step {}: {}\n\n{}\n\nFiles to work with: {}",
+            step.number,
+            step.title,
+            step.description,
+            if step.files.is_empty() {
+                "(none specified)".to_string()
+            } else {
+                step.files.join(", ")
+            }
+        );
+
+        // Execute the step
+        let start = Instant::now();
+        let result = agent::run_turn(ctx, &prompt, messages);
+
+        // Update step status based on result
+        let step_status = if result.is_ok() {
+            plan::PlanStepStatus::Completed
+        } else {
+            plan::PlanStepStatus::Failed
+        };
+
+        {
+            let mut state = ctx.plan_mode.borrow_mut();
+            if let Some(plan) = &mut state.current_plan {
+                if let Some(s) = plan.step_mut(step.number) {
+                    s.status = step_status;
+                }
+            }
+        }
+
+        // Log step end
+        let _ = ctx.transcript.borrow_mut().plan_step_end(
+            &plan_name,
+            step.number,
+            if result.is_ok() {
+                "completed"
+            } else {
+                "failed"
+            },
+        );
+
+        match result {
+            Ok(stats) => {
+                print_stats(start.elapsed(), &stats);
+                println!("\nStep {} complete.", step.number);
+            }
+            Err(e) => {
+                eprintln!("Step {} failed: {}", step.number, e);
+            }
+        }
+
+        // Ask user to continue
+        print!("Continue with next step? [Y/n]: ");
+        use std::io::{self, Write};
+        let _ = io::stdout().flush();
+
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).is_err() {
+            println!("Stopping execution.");
+            break;
+        }
+
+        let input = input.trim().to_lowercase();
+        if input == "n" || input == "no" {
+            println!("Stopping execution. Use /plan execute to continue later.");
+            ctx.plan_mode.borrow_mut().enter_review();
+            return;
+        }
+    }
+}
+
+fn handle_plan_save(ctx: &Context, name: Option<&str>) {
+    let state = ctx.plan_mode.borrow();
+    let Some(plan) = &state.current_plan else {
+        println!("No plan to save.");
+        return;
+    };
+
+    // Clone the plan so we can modify it if needed
+    let mut plan_to_save = plan.clone();
+    drop(state);
+
+    // Use provided name or the auto-generated one
+    if let Some(n) = name {
+        if !n.is_empty() {
+            plan_to_save.name = n.to_string();
+        }
+    }
+
+    match plan::save_plan(&plan_to_save, &ctx.root) {
+        Ok(path) => {
+            println!("Plan saved to: {}", path.display());
+            let _ = ctx
+                .transcript
+                .borrow_mut()
+                .plan_saved(&plan_to_save.name, &path);
+        }
+        Err(e) => {
+            eprintln!("Failed to save plan: {}", e);
+        }
+    }
+}
+
+fn handle_plan_cancel(ctx: &Context) {
+    let was_active = ctx.plan_mode.borrow().active;
+    ctx.plan_mode.borrow_mut().exit();
+
+    if was_active {
+        println!("Plan cancelled.");
+    } else {
+        println!("No active plan.");
+    }
+}
+
+fn handle_plan_list(ctx: &Context) {
+    match plan::list_plans(&ctx.root) {
+        Ok(plans) => {
+            if plans.is_empty() {
+                println!("No saved plans.");
+                println!("Use /plan <task> to create a new plan.");
+            } else {
+                println!("Saved Plans:");
+                for p in plans {
+                    let goal_preview: String = p.goal.chars().take(50).collect();
+                    let ellipsis = if p.goal.len() > 50 { "..." } else { "" };
+                    println!(
+                        "  {} [{}] \"{}{}\" ({} steps)",
+                        p.name,
+                        p.status.as_str(),
+                        goal_preview,
+                        ellipsis,
+                        p.step_count
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to list plans: {}", e);
+        }
+    }
+}
+
+fn handle_plan_load(ctx: &Context, name: &str) {
+    // Check if already in plan mode
+    {
+        let state = ctx.plan_mode.borrow();
+        if state.active {
+            println!("Already in plan mode. Use /plan cancel to exit first.");
+            return;
+        }
+    }
+
+    match plan::load_plan(name, &ctx.root) {
+        Ok(plan) => {
+            println!("Loaded plan: {}", plan.name);
+            println!("{}", plan.format_display());
+
+            let _ = ctx.transcript.borrow_mut().plan_loaded(&plan.name);
+            ctx.plan_mode.borrow_mut().load_plan(plan);
+
+            println!("Options:");
+            println!("  /plan execute  - execute the plan step-by-step");
+            println!("  /plan cancel   - discard current plan");
+        }
+        Err(e) => {
+            eprintln!("Failed to load plan: {}", e);
+        }
+    }
+}
+
+fn handle_plan_run(ctx: &Context, name: &str, messages: &mut Vec<serde_json::Value>) {
+    // Load the plan first
+    handle_plan_load(ctx, name);
+
+    // If loaded successfully, execute it
+    if ctx.plan_mode.borrow().active {
+        handle_plan_execute(ctx, messages);
+    }
+}
+
+fn handle_plan_delete(ctx: &Context, name: &str) {
+    match plan::delete_plan(name, &ctx.root) {
+        Ok(()) => {
+            println!("Deleted plan: {}", name);
+        }
+        Err(e) => {
+            eprintln!("Failed to delete plan: {}", e);
         }
     }
 }

@@ -1,6 +1,12 @@
 //! Agent loop for processing user input and executing tool calls.
 
-use crate::{cli::Context, llm, policy::Decision, tools};
+use crate::{
+    cli::Context,
+    llm,
+    plan::{self, PlanPhase},
+    policy::Decision,
+    tools,
+};
 use anyhow::Result;
 use serde_json::{json, Value};
 
@@ -76,6 +82,10 @@ pub fn run_turn(
 
     trace(ctx, "TARGET", &target.to_string());
 
+    // Check if we're in plan mode
+    let plan_phase = ctx.plan_mode.borrow().phase;
+    let in_planning_mode = plan_phase == PlanPhase::Planning;
+
     // Check for $skill-name mentions and auto-activate
     for word in user_input.split_whitespace() {
         if word.starts_with('$') && word.len() > 1 {
@@ -101,8 +111,28 @@ pub fn run_turn(
     }
 
     // Get built-in tool schemas (including Task for main agent) and add MCP tools
-    let mut tool_schemas = tools::schemas_with_task();
-    {
+    let mut tool_schemas = if in_planning_mode {
+        // In planning mode, only provide read-only tools
+        tools::schemas()
+            .into_iter()
+            .filter(|schema| {
+                if let Some(name) = schema
+                    .get("function")
+                    .and_then(|f| f.get("name"))
+                    .and_then(|n| n.as_str())
+                {
+                    matches!(name, "Read" | "Grep" | "Glob")
+                } else {
+                    false
+                }
+            })
+            .collect()
+    } else {
+        tools::schemas_with_task()
+    };
+
+    // Only add MCP tools if not in planning mode
+    if !in_planning_mode {
         let mcp_manager = ctx.mcp_manager.borrow();
         if mcp_manager.has_connected_servers() {
             // Add MCP tools to the schema
@@ -151,7 +181,11 @@ pub fn run_turn(
             let client = backends.get_client(&target.backend)?;
 
             // Build system prompt with skill pack info
-            let mut system_prompt = SYSTEM_PROMPT.to_string();
+            let mut system_prompt = if in_planning_mode {
+                plan::PLAN_MODE_SYSTEM_PROMPT.to_string()
+            } else {
+                SYSTEM_PROMPT.to_string()
+            };
 
             // Add skill pack index
             let skill_index = ctx.skill_index.borrow();
@@ -204,6 +238,45 @@ pub fn run_turn(
             if !content.is_empty() {
                 println!("{}", content);
                 let _ = ctx.transcript.borrow_mut().assistant_message(content);
+
+                // In planning mode, try to parse the output for a plan
+                if in_planning_mode {
+                    let goal = ctx
+                        .plan_mode
+                        .borrow()
+                        .current_plan
+                        .as_ref()
+                        .map(|p| p.goal.clone())
+                        .unwrap_or_default();
+
+                    if let Ok(parsed_plan) = plan::parse_plan_output(content, &goal) {
+                        // Update the plan in plan mode state
+                        let mut state = ctx.plan_mode.borrow_mut();
+                        if let Some(current_plan) = &mut state.current_plan {
+                            current_plan.summary = parsed_plan.summary;
+                            current_plan.steps = parsed_plan.steps;
+                            current_plan.status = plan::PlanStatus::Ready;
+                        }
+                        state.enter_review();
+
+                        // Log plan created
+                        let plan_name = state
+                            .current_plan
+                            .as_ref()
+                            .map(|p| p.name.clone())
+                            .unwrap_or_default();
+                        let step_count = state
+                            .current_plan
+                            .as_ref()
+                            .map(|p| p.steps.len())
+                            .unwrap_or(0);
+                        drop(state);
+                        let _ = ctx
+                            .transcript
+                            .borrow_mut()
+                            .plan_created(&plan_name, step_count);
+                    }
+                }
             }
         }
 

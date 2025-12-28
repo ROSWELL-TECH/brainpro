@@ -5,6 +5,7 @@ mod config;
 mod llm;
 mod mcp;
 mod model_routing;
+mod plan;
 mod policy;
 mod skillpacks;
 mod subagent;
@@ -229,6 +230,7 @@ fn main() -> Result<()> {
         skill_index: RefCell::new(skill_index),
         active_skills: RefCell::new(skillpacks::ActiveSkills::new()),
         model_router: RefCell::new(model_router),
+        plan_mode: RefCell::new(plan::PlanModeState::new()),
     };
 
     if let Some(prompt) = &ctx.args.prompt {

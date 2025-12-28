@@ -272,4 +272,77 @@ impl Transcript {
             }),
         )
     }
+
+    /// Log plan mode start
+    pub fn plan_mode_start(&mut self, goal: &str) -> Result<()> {
+        self.log("plan_mode_start", serde_json::json!({ "goal": goal }))
+    }
+
+    /// Log plan created
+    pub fn plan_created(&mut self, name: &str, step_count: usize) -> Result<()> {
+        self.log(
+            "plan_created",
+            serde_json::json!({
+                "name": name,
+                "step_count": step_count,
+            }),
+        )
+    }
+
+    /// Log plan step start
+    pub fn plan_step_start(&mut self, plan: &str, step: usize, title: &str) -> Result<()> {
+        self.log(
+            "plan_step_start",
+            serde_json::json!({
+                "plan": plan,
+                "step": step,
+                "title": title,
+            }),
+        )
+    }
+
+    /// Log plan step end
+    pub fn plan_step_end(&mut self, plan: &str, step: usize, status: &str) -> Result<()> {
+        self.log(
+            "plan_step_end",
+            serde_json::json!({
+                "plan": plan,
+                "step": step,
+                "status": status,
+            }),
+        )
+    }
+
+    /// Log plan saved
+    pub fn plan_saved(&mut self, name: &str, path: &Path) -> Result<()> {
+        self.log(
+            "plan_saved",
+            serde_json::json!({
+                "name": name,
+                "path": path.display().to_string(),
+            }),
+        )
+    }
+
+    /// Log plan loaded
+    pub fn plan_loaded(&mut self, name: &str) -> Result<()> {
+        self.log("plan_loaded", serde_json::json!({ "name": name }))
+    }
+
+    /// Log plan execution complete
+    pub fn plan_complete(
+        &mut self,
+        name: &str,
+        steps_completed: usize,
+        steps_failed: usize,
+    ) -> Result<()> {
+        self.log(
+            "plan_complete",
+            serde_json::json!({
+                "name": name,
+                "steps_completed": steps_completed,
+                "steps_failed": steps_failed,
+            }),
+        )
+    }
 }
