@@ -240,8 +240,10 @@ impl PricingTable {
         models.insert("gpt-4-turbo".to_string(), ModelPricing::new(10.00, 30.00));
         models.insert("gpt-3.5-turbo".to_string(), ModelPricing::new(0.50, 1.50));
         models.insert("o1".to_string(), ModelPricing::new(15.00, 60.00));
-        models.insert("o1-mini".to_string(), ModelPricing::new(3.00, 12.00));
+        models.insert("o1-mini".to_string(), ModelPricing::new(1.10, 4.40));
         models.insert("o1-preview".to_string(), ModelPricing::new(15.00, 60.00));
+        models.insert("o3".to_string(), ModelPricing::new(2.00, 8.00));
+        models.insert("o3-mini".to_string(), ModelPricing::new(1.10, 4.40));
 
         // Anthropic models
         models.insert(
@@ -261,12 +263,51 @@ impl PricingTable {
             ModelPricing::new(15.00, 75.00),
         );
 
-        // Venice.ai models - free tier default, override via [pricing] config if needed
+        // Claude 4.x models
+        models.insert(
+            "claude-opus-4-5-20251101".to_string(),
+            ModelPricing::new(5.00, 25.00),
+        );
+        models.insert(
+            "claude-opus-4.5".to_string(),
+            ModelPricing::new(5.00, 25.00),
+        );
+        models.insert(
+            "claude-opus-4.1".to_string(),
+            ModelPricing::new(15.00, 75.00),
+        );
+        models.insert("claude-opus-4".to_string(), ModelPricing::new(15.00, 75.00));
+        models.insert(
+            "claude-sonnet-4.5".to_string(),
+            ModelPricing::new(3.00, 15.00),
+        );
+        models.insert(
+            "claude-sonnet-4".to_string(),
+            ModelPricing::new(3.00, 15.00),
+        );
+        models.insert(
+            "claude-sonnet-3.7".to_string(),
+            ModelPricing::new(3.00, 15.00),
+        );
+        models.insert(
+            "claude-haiku-4.5".to_string(),
+            ModelPricing::new(1.00, 5.00),
+        );
+        models.insert("claude-haiku-3".to_string(), ModelPricing::new(0.25, 1.25));
+
+        // Venice.ai models - pricing loaded dynamically from API cache
+        // See venice_pricing module for cache refresh logic (1-week expiry)
+        // Fallback defaults if API/cache unavailable:
+        models.insert("qwen3-4b".to_string(), ModelPricing::new(0.05, 0.15));
         models.insert(
             "qwen3-235b-a22b-instruct-2507".to_string(),
-            ModelPricing::new(0.00, 0.00),
+            ModelPricing::new(0.15, 0.75),
         );
-        models.insert("llama-3.3-70b".to_string(), ModelPricing::new(0.00, 0.00));
+        models.insert("llama-3.2-3b".to_string(), ModelPricing::new(0.15, 0.60));
+        models.insert(
+            "venice-uncensored".to_string(),
+            ModelPricing::new(0.20, 0.90),
+        );
 
         // Ollama / local models (no cost)
         models.insert("llama3".to_string(), ModelPricing::new(0.00, 0.00));
@@ -314,6 +355,14 @@ impl PricingTable {
     #[allow(dead_code)] // For future runtime pricing updates
     pub fn set(&mut self, model: &str, pricing: ModelPricing) {
         self.models.insert(model.to_string(), pricing);
+    }
+
+    /// Merge Venice pricing from cache/API into the pricing table.
+    /// Venice pricing overrides hardcoded defaults since it's fresher.
+    pub fn merge_venice_pricing(&mut self, venice_pricing: HashMap<String, ModelPricing>) {
+        for (model, pricing) in venice_pricing {
+            self.models.insert(model, pricing);
+        }
     }
 }
 

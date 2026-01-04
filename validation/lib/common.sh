@@ -61,6 +61,7 @@ run_yo_oneshot() {
 
 # Run yo in REPL mode with piped commands
 # Usage: OUTPUT=$(run_yo_repl "command1" "command2" ...)
+# Note: Always uses --yes to skip permission prompts for automated testing
 run_yo_repl() {
     local commands=""
     for cmd in "$@"; do
@@ -69,9 +70,10 @@ run_yo_repl() {
 
     echo "REPL Commands:" >> "$TEST_LOG"
     echo "$commands" >> "$TEST_LOG"
+    echo "Command: $YO_BIN --yes" >> "$TEST_LOG"
 
     local output
-    output=$(echo "$commands" | "$YO_BIN" 2>&1)
+    output=$(echo "$commands" | "$YO_BIN" --yes 2>&1)
     local exit_code=$?
 
     echo "Exit code: $exit_code" >> "$TEST_LOG"

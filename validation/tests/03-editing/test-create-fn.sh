@@ -11,7 +11,7 @@ reset_scratch
 
 PROMPT='Create a new Rust file at fixtures/scratch/math.rs with a function called "add" that takes two i32 arguments and returns their sum'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits --yes)
+OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits)
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

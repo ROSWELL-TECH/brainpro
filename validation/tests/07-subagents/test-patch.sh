@@ -13,7 +13,7 @@ cp "$FIXTURES_DIR/hello_repo/src/lib.rs" "$SCRATCH_DIR/lib.rs"
 
 PROMPT='Use the patch agent to add a doc comment to the greet function in fixtures/scratch/lib.rs'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits --yes)
+OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits)
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

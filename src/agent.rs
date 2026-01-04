@@ -5,8 +5,7 @@ use crate::{
     llm::{self, LlmClient},
     plan::{self, PlanPhase},
     policy::Decision,
-    tool_display,
-    tools,
+    tool_display, tools,
 };
 use anyhow::Result;
 use serde_json::{json, Value};

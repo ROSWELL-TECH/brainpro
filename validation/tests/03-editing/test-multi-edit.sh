@@ -13,7 +13,7 @@ cp "$FIXTURES_DIR/hello_repo/src/lib.rs" "$SCRATCH_DIR/lib.rs"
 
 PROMPT='In fixtures/scratch/lib.rs: 1) Rename the function from "greet" to "hello" 2) Add a new function called "farewell" that returns "Goodbye, World!"'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits --yes)
+OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits)
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

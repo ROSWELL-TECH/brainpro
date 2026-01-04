@@ -17,6 +17,7 @@ mod tool_display;
 mod tool_filter;
 mod tools;
 mod transcript;
+mod vendors;
 
 use anyhow::Result;
 use clap::Parser;
@@ -243,8 +244,11 @@ fn main() -> Result<()> {
     // Create hook manager
     let hook_manager = hooks::HookManager::new(cfg.hooks.clone(), session_id.clone(), root.clone());
 
-    // Create cost tracker with pricing from config
-    let pricing_table = cost::PricingTable::from_config(&cfg.model_pricing);
+    // Create cost tracker with pricing from config + Venice API cache
+    let mut pricing_table = cost::PricingTable::from_config(&cfg.model_pricing);
+    if let Some(venice_pricing) = vendors::venice::get_venice_pricing() {
+        pricing_table.merge_venice_pricing(venice_pricing);
+    }
     let session_costs = cost::SessionCosts::new(session_id.clone(), pricing_table);
 
     // Build command index
