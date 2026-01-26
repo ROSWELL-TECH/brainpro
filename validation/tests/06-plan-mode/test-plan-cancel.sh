@@ -16,7 +16,7 @@ cp "$FIXTURES_DIR/hello_repo/src/lib.rs" "$SCRATCH_DIR/lib.rs"
 ORIGINAL_HASH=$(shasum "$SCRATCH_DIR/lib.rs" | cut -d' ' -f1)
 
 # Create a plan but cancel it
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "/plan Delete the greet function from fixtures/scratch/lib.rs" \
     "/plan cancel" \
     "/exit")

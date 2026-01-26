@@ -1,21 +1,21 @@
 #!/bin/bash
-# Test: Ask yo to create a feature branch
-# Expected: yo creates and checks out a new branch
+# Test: Ask brainpro to create a feature branch
+# Expected: brainpro creates and checks out a new branch
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/common.sh"
 source "$SCRIPT_DIR/../../lib/assertions.sh"
 
-check_yo_binary
+check_brainpro_binary
 
 setup_test "create-branch"
 
 # Reset mock_webapp scratch
 reset_mock_webapp
 
-# Ask yo to create a branch
-OUTPUT=$(run_yo_in_mock_webapp "Create a new git branch called 'feature/auth-improvements' and switch to it.")
+# Ask brainpro to create a branch
+OUTPUT=$(run_brainpro_in_mock_webapp "Create a new git branch called 'feature/auth-improvements' and switch to it.")
 
 # Assert the branch exists
 BRANCH=$(cd "$MOCK_WEBAPP_SCRATCH" && git branch --show-current)

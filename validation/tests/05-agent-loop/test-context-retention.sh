@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../../lib/assertions.sh"
 setup_test "context-retention"
 
 # Run REPL - first establish a fact, then ask about it
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "Read fixtures/hello_repo/src/lib.rs and remember what the test function is called" \
     "What was the name of the test function you just read?" \
     "/exit")

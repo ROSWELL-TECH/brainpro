@@ -1,8 +1,8 @@
 //! Slash commands system for user-defined markdown commands.
 //!
 //! Commands are defined as markdown files in:
-//! - .yo/commands/<name>.md (project-level)
-//! - ~/.yo/commands/<name>.md (user-level)
+//! - .brainpro/commands/<name>.md (project-level)
+//! - ~/.brainpro/commands/<name>.md (user-level)
 //!
 //! The command name is derived from the filename (without .md extension).
 //! The file content becomes the prompt when the command is invoked.
@@ -52,18 +52,18 @@ pub struct CommandIndex {
 }
 
 impl CommandIndex {
-    /// Build the command index by scanning .yo/commands/ and ~/.yo/commands/
+    /// Build the command index by scanning .brainpro/commands/ and ~/.brainpro/commands/
     pub fn build(root: &Path) -> Self {
         let mut index = Self::default();
 
         // Load user-level commands first (lower priority)
         if let Some(home) = dirs::home_dir() {
-            let user_commands_dir = home.join(".yo").join("commands");
+            let user_commands_dir = home.join(".brainpro").join("commands");
             index.load_from_dir(&user_commands_dir, CommandSource::User);
         }
 
         // Load project-level commands (higher priority, overrides user)
-        let project_commands_dir = root.join(".yo").join("commands");
+        let project_commands_dir = root.join(".brainpro").join("commands");
         index.load_from_dir(&project_commands_dir, CommandSource::Project);
 
         index

@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 fn history_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".yo")
+        .join(".brainpro")
         .join("history")
 }
 
@@ -173,7 +173,7 @@ pub fn run_repl(ctx: Context, initial_messages: Option<Vec<serde_json::Value>>) 
     let history_file = history_path();
     let _ = rl.load_history(&history_file);
 
-    println!("yo - type /help for commands, /exit to quit");
+    println!("brainpro - type /help for commands, /exit to quit");
 
     loop {
         match rl.readline(">>> ") {
@@ -353,7 +353,7 @@ fn handle_command(ctx: &Context, cmd: &str, messages: &mut Vec<serde_json::Value
             println!("  /plan <task>           - enter plan mode with a task");
             println!("  /plan                  - show current plan or help");
             println!("  /plan execute          - execute current plan step-by-step");
-            println!("  /plan save [name]      - save plan to .yo/plans/");
+            println!("  /plan save [name]      - save plan to .brainpro/plans/");
             println!("  /plan cancel           - discard current plan");
             println!("  /plan list             - list saved plans");
             println!("  /plan load <name>      - load a saved plan");
@@ -634,7 +634,7 @@ fn handle_agents_command(ctx: &Context) {
     let config = ctx.config.borrow();
     if config.agents.is_empty() {
         println!("No subagents configured.");
-        println!("Add agent definitions to .yo/agents/<name>.toml");
+        println!("Add agent definitions to .brainpro/agents/<name>.toml");
     } else {
         println!("Available subagents:");
         for (name, spec) in &config.agents {
@@ -714,7 +714,7 @@ fn handle_skillpacks_command(ctx: &Context) {
     let index = ctx.skill_index.borrow();
     if index.count() == 0 {
         println!("No skill packs found.");
-        println!("Add skills to .yo/skills/<name>/SKILL.md");
+        println!("Add skills to .brainpro/skills/<name>/SKILL.md");
     } else {
         println!("Skill Packs ({}):", index.count());
         for meta in index.all() {
@@ -814,14 +814,14 @@ fn handle_plan_command(ctx: &Context, args: &str, messages: &mut Vec<serde_json:
                     println!("{}", plan.format_display());
                     println!("Options:");
                     println!("  /plan execute  - execute the plan step-by-step");
-                    println!("  /plan save     - save plan to .yo/plans/");
+                    println!("  /plan save     - save plan to .brainpro/plans/");
                     println!("  /plan cancel   - discard current plan");
                 }
             } else {
                 println!("Plan Mode Commands:");
                 println!("  /plan <task>        - enter plan mode with a task");
                 println!("  /plan execute       - execute the current plan");
-                println!("  /plan save [name]   - save plan to .yo/plans/");
+                println!("  /plan save [name]   - save plan to .brainpro/plans/");
                 println!("  /plan cancel        - discard current plan");
                 println!("  /plan list          - list saved plans");
                 println!("  /plan load <name>   - load a saved plan");
@@ -933,7 +933,7 @@ fn handle_plan_start(ctx: &Context, goal: String, messages: &mut Vec<serde_json:
                     println!("\n{}", plan.format_display());
                     println!("Options:");
                     println!("  /plan execute  - execute the plan step-by-step");
-                    println!("  /plan save     - save plan to .yo/plans/");
+                    println!("  /plan save     - save plan to .brainpro/plans/");
                     println!("  /plan cancel   - discard current plan");
                 }
             }
@@ -1300,7 +1300,7 @@ fn handle_commands_list(ctx: &Context) {
 
     if commands.is_empty() {
         println!("No slash commands defined.");
-        println!("Add commands to .yo/commands/<name>.md");
+        println!("Add commands to .brainpro/commands/<name>.md");
     } else {
         println!("Slash Commands ({}):", commands.len());
         for cmd in commands {

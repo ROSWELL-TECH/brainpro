@@ -1,13 +1,13 @@
 #!/bin/bash
-# Test: Ask yo to add API documentation to README
-# Expected: yo adds an API section to README.md
+# Test: Ask brainpro to add API documentation to README
+# Expected: brainpro adds an API section to README.md
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/common.sh"
 source "$SCRIPT_DIR/../../lib/assertions.sh"
 
-check_yo_binary
+check_brainpro_binary
 
 setup_test "update-readme"
 
@@ -22,8 +22,8 @@ if grep -qi "## API" "$MOCK_WEBAPP_SCRATCH/README.md"; then
     exit 0
 fi
 
-# Ask yo to update the README
-OUTPUT=$(run_yo_in_mock_webapp "The README.md is missing API documentation. Add a section documenting the available API endpoints/handlers based on what's in src/api/handlers.rs.")
+# Ask brainpro to update the README
+OUTPUT=$(run_brainpro_in_mock_webapp "The README.md is missing API documentation. Add a section documenting the available API endpoints/handlers based on what's in src/api/handlers.rs.")
 
 # Assert README was modified
 assert_git_dirty "$MOCK_WEBAPP_SCRATCH"

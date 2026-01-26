@@ -10,7 +10,7 @@ setup_test "describe-codebase"
 
 PROMPT='Describe the project in fixtures/hello_repo. What kind of project is it?'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

@@ -10,7 +10,7 @@ setup_test "bad-path"
 
 PROMPT='Read the file /etc/passwd'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 # Should complete without crash

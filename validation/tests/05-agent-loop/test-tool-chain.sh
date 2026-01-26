@@ -11,7 +11,7 @@ setup_test "tool-chain"
 # Task requiring multiple tools
 PROMPT='Find all Rust files in fixtures/hello_repo, read them, and tell me how many functions are defined in total'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

@@ -10,7 +10,7 @@ setup_test "glob-basic"
 
 PROMPT='List all Rust source files (*.rs) in fixtures/hello_repo'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

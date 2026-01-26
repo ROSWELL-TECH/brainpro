@@ -179,7 +179,7 @@ pub struct SchemaOptions {
 
 Command-line exposure:
 ```
-yo -O                    # Enable all optimizations
-yo -O --no-compress      # Optimize schemas but not results
-yo --optimize-level=2    # Granular control
+brainpro -O                    # Enable all optimizations
+brainpro -O --no-compress      # Optimize schemas but not results
+brainpro --optimize-level=2    # Granular control
 ```

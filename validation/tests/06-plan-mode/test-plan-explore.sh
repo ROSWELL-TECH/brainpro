@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../../lib/assertions.sh"
 setup_test "plan-explore"
 
 # Create a plan - exploration should happen first
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "/plan Understand the structure of fixtures/hello_repo and describe it" \
     "/plan cancel" \
     "/exit")

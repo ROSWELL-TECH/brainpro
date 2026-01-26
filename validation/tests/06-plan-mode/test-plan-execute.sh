@@ -13,7 +13,7 @@ reset_scratch
 cp "$FIXTURES_DIR/hello_repo/src/lib.rs" "$SCRATCH_DIR/lib.rs"
 
 # Create and execute a simple plan
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "/plan Add a doc comment to the greet function in fixtures/scratch/lib.rs" \
     "/plan execute" \
     "/exit")

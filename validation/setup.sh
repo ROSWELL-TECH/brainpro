@@ -1,19 +1,19 @@
 #!/bin/bash
-# Setup script for yo validation tests
+# Setup script for brainpro validation tests
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-echo "=== yo Validation Setup ==="
+echo "=== brainpro Validation Setup ==="
 echo ""
 
-# Build yo release binary
-echo "Building yo (release)..."
+# Build brainpro release binary
+echo "Building brainpro (release)..."
 cd "$PROJECT_ROOT"
 cargo build --release
-echo "  Done: target/release/yo"
+echo "  Done: target/release/brainpro"
 
 # Build MCP calc server (optional, for MCP tests)
 if [ -d "$PROJECT_ROOT/fixtures/mcp_calc_server" ]; then

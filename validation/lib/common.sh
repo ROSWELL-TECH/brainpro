@@ -1,11 +1,11 @@
 #!/bin/bash
-# Common functions for yo validation tests
+# Common functions for brainpro validation tests
 
 # Paths - use unique variable names to avoid conflicts
 _COMMON_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VALIDATION_DIR="$(dirname "$_COMMON_SCRIPT_DIR")"
 PROJECT_ROOT="$(dirname "$VALIDATION_DIR")"
-YO_BIN="${PROJECT_ROOT}/target/release/yo"
+BRAINPRO_BIN="${PROJECT_ROOT}/target/release/brainpro"
 FIXTURES_DIR="${PROJECT_ROOT}/fixtures"
 SCRATCH_DIR="${FIXTURES_DIR}/scratch"
 
@@ -34,20 +34,20 @@ setup_test() {
     echo "Started: $(date)" >> "$TEST_LOG"
 }
 
-# Run yo in one-shot mode (-p)
-# Usage: OUTPUT=$(run_yo_oneshot "prompt" [additional args...])
+# Run brainpro in one-shot mode (-p)
+# Usage: OUTPUT=$(run_brainpro_oneshot "prompt" [additional args...])
 # Note: Always uses --yes to skip permission prompts for automated testing
-run_yo_oneshot() {
+run_brainpro_oneshot() {
     local prompt="$1"
     shift
     local args=("$@")
 
-    echo "Command: $YO_BIN -p \"$prompt\" --yes ${args[*]}" >> "$TEST_LOG"
+    echo "Command: $BRAINPRO_BIN -p \"$prompt\" --yes ${args[*]}" >> "$TEST_LOG"
 
-    # Run yo and capture both stdout and stderr
+    # Run brainpro and capture both stdout and stderr
     # Always use --yes to auto-approve for testing
     local output
-    output=$("$YO_BIN" -p "$prompt" --yes "${args[@]}" 2>&1)
+    output=$("$BRAINPRO_BIN" -p "$prompt" --yes "${args[@]}" 2>&1)
     local exit_code=$?
 
     echo "Exit code: $exit_code" >> "$TEST_LOG"
@@ -59,10 +59,10 @@ run_yo_oneshot() {
     return $exit_code
 }
 
-# Run yo in REPL mode with piped commands
-# Usage: OUTPUT=$(run_yo_repl "command1" "command2" ...)
+# Run brainpro in REPL mode with piped commands
+# Usage: OUTPUT=$(run_brainpro_repl "command1" "command2" ...)
 # Note: Always uses --yes to skip permission prompts for automated testing
-run_yo_repl() {
+run_brainpro_repl() {
     local commands=""
     for cmd in "$@"; do
         commands+="$cmd"$'\n'
@@ -70,10 +70,10 @@ run_yo_repl() {
 
     echo "REPL Commands:" >> "$TEST_LOG"
     echo "$commands" >> "$TEST_LOG"
-    echo "Command: $YO_BIN --yes" >> "$TEST_LOG"
+    echo "Command: $BRAINPRO_BIN --yes" >> "$TEST_LOG"
 
     local output
-    output=$(echo "$commands" | "$YO_BIN" --yes 2>&1)
+    output=$(echo "$commands" | "$BRAINPRO_BIN" --yes 2>&1)
     local exit_code=$?
 
     echo "Exit code: $exit_code" >> "$TEST_LOG"
@@ -85,9 +85,9 @@ run_yo_repl() {
     return $exit_code
 }
 
-# Run yo REPL with expect script (for complex interactions)
-# Usage: OUTPUT=$(run_yo_repl_expect "script.exp")
-run_yo_repl_expect() {
+# Run brainpro REPL with expect script (for complex interactions)
+# Usage: OUTPUT=$(run_brainpro_repl_expect "script.exp")
+run_brainpro_repl_expect() {
     local script="$1"
 
     if ! command -v expect &> /dev/null; then
@@ -160,10 +160,10 @@ print_summary() {
     return 0
 }
 
-# Check if yo binary exists
-check_yo_binary() {
-    if [ ! -x "$YO_BIN" ]; then
-        echo -e "${RED}ERROR${NC}: yo binary not found at $YO_BIN"
+# Check if brainpro binary exists
+check_brainpro_binary() {
+    if [ ! -x "$BRAINPRO_BIN" ]; then
+        echo -e "${RED}ERROR${NC}: brainpro binary not found at $BRAINPRO_BIN"
         echo "Run: cargo build --release"
         exit 1
     fi
@@ -206,17 +206,17 @@ cleanup_mock_webapp() {
     echo "Mock webapp scratch cleaned up" >> "$TEST_LOG"
 }
 
-# Run yo in the mock_webapp scratch directory
-# Usage: OUTPUT=$(run_yo_in_mock_webapp "prompt" [additional args...])
-run_yo_in_mock_webapp() {
+# Run brainpro in the mock_webapp scratch directory
+# Usage: OUTPUT=$(run_brainpro_in_mock_webapp "prompt" [additional args...])
+run_brainpro_in_mock_webapp() {
     local prompt="$1"
     shift
     local args=("$@")
 
-    echo "Command: cd $MOCK_WEBAPP_SCRATCH && $YO_BIN -p \"$prompt\" --yes ${args[*]}" >> "$TEST_LOG"
+    echo "Command: cd $MOCK_WEBAPP_SCRATCH && $BRAINPRO_BIN -p \"$prompt\" --yes ${args[*]}" >> "$TEST_LOG"
 
     local output
-    output=$(cd "$MOCK_WEBAPP_SCRATCH" && "$YO_BIN" -p "$prompt" --yes "${args[@]}" 2>&1)
+    output=$(cd "$MOCK_WEBAPP_SCRATCH" && "$BRAINPRO_BIN" -p "$prompt" --yes "${args[@]}" 2>&1)
     local exit_code=$?
 
     echo "Exit code: $exit_code" >> "$TEST_LOG"

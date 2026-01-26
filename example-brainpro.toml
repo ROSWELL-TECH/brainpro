@@ -1,17 +1,17 @@
-# Example yo configuration file
+# Example brainpro configuration file
 #
 # Place this file at:
-#   ~/.yo/config.toml         (user-level, applies to all projects)
-#   .yo/config.toml           (project-level, overrides user-level)
-#   .yo/config.local.toml     (local overrides, should be gitignored)
+#   ~/.brainpro/config.toml         (user-level, applies to all projects)
+#   .brainpro/config.toml           (project-level, overrides user-level)
+#   .brainpro/config.local.toml     (local overrides, should be gitignored)
 #
-# Or specify explicitly with: yo --config /path/to/config.toml
+# Or specify explicitly with: brainpro --config /path/to/config.toml
 #
 # Precedence (highest to lowest):
 #   1. CLI flags (--mode, --allowed-tools, etc.)
-#   2. .yo/config.local.toml
-#   3. .yo/config.toml
-#   4. ~/.yo/config.toml
+#   2. .brainpro/config.local.toml
+#   3. .brainpro/config.toml
+#   4. ~/.brainpro/config.toml
 #   5. Built-in defaults
 
 # =============================================================================
@@ -179,7 +179,7 @@ keep_last_turns = 10
 #   env         - Environment variables (default: {})
 #   cwd         - Working directory (default: ".")
 #   enabled     - Whether this server can be used (default: true)
-#   autoStart   - Start server automatically on yo startup (default: false)
+#   autoStart   - Start server automatically on brainpro startup (default: false)
 #   timeoutMs   - Request timeout in milliseconds (default: 30000)
 #
 # Connect/disconnect servers in REPL with:
@@ -220,8 +220,8 @@ keep_last_turns = 10
 # AGENTS (Subagents)
 # =============================================================================
 # Agents are defined in separate TOML files, not in this config:
-#   ~/.yo/agents/<name>.toml      (user-level)
-#   .yo/agents/<name>.toml        (project-level, overrides user-level)
+#   ~/.brainpro/agents/<name>.toml      (user-level)
+#   .brainpro/agents/<name>.toml        (project-level, overrides user-level)
 #
 # See fixtures/agents/ for examples. Each agent spec includes:
 #   name            - Agent identifier

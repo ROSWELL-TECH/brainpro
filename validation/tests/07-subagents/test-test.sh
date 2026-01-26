@@ -10,7 +10,7 @@ setup_test "test-agent"
 
 PROMPT='Use the test agent to run the tests for fixtures/hello_repo'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

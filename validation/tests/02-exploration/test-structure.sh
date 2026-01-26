@@ -10,7 +10,7 @@ setup_test "understand-structure"
 
 PROMPT='What functions are defined in fixtures/hello_repo/src/lib.rs?'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

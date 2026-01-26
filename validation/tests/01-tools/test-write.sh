@@ -11,7 +11,7 @@ reset_scratch
 
 PROMPT='Create a file at fixtures/scratch/test.txt containing exactly the text "validation test passed"'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits)
+OUTPUT=$(run_brainpro_oneshot "$PROMPT" --mode acceptEdits)
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

@@ -10,7 +10,7 @@ setup_test "scout-agent"
 
 PROMPT='Use the scout agent to find all the source files in fixtures/hello_repo and list them'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Assertion functions for yo validation tests
+# Assertion functions for brainpro validation tests
 # All assertions set TEST_PASSED=0 on failure
 
 # Assert exit code equals expected

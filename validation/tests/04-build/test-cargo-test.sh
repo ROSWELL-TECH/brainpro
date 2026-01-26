@@ -10,7 +10,7 @@ setup_test "cargo-test"
 
 PROMPT='Run the tests for the project in fixtures/hello_repo and tell me if they pass'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

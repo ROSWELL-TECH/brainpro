@@ -10,7 +10,7 @@ setup_test "missing-file"
 
 PROMPT='Read the file fixtures/hello_repo/nonexistent.rs'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 # Should complete without crash

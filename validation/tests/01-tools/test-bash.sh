@@ -10,7 +10,7 @@ setup_test "bash-basic"
 
 PROMPT='Run the command "ls fixtures/hello_repo/src" and tell me what files are there'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

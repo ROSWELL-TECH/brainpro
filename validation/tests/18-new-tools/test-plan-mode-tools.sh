@@ -10,7 +10,7 @@ setup_test "plan-mode-tools"
 
 PROMPT='Use the EnterPlanMode tool to enter planning mode, then describe the structure of fixtures/hello_repo, then use ExitPlanMode to exit.'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

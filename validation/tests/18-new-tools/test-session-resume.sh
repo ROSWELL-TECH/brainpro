@@ -9,12 +9,12 @@ source "$SCRIPT_DIR/../../lib/assertions.sh"
 setup_test "session-resume"
 
 # Clean up any old sessions
-SESSIONS_DIR="$HOME/.yo/sessions"
+SESSIONS_DIR="$HOME/.brainpro/sessions"
 rm -rf "$SESSIONS_DIR"
 
-# Run yo in REPL mode with a simple command then exit
+# Run brainpro in REPL mode with a simple command then exit
 # The session should be auto-saved on clean exit
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "What is 2+2? Just say the number." \
     "/exit")
 EXIT_CODE=$?
@@ -38,7 +38,7 @@ else
         echo "Session ID: $SESSION_ID" >> "$TEST_LOG"
 
         # Try to resume the session
-        RESUME_OUTPUT=$("$YO_BIN" --resume "$SESSION_ID" -p "What did I just ask you?" --yes 2>&1)
+        RESUME_OUTPUT=$("$BRAINPRO_BIN" --resume "$SESSION_ID" -p "What did I just ask you?" --yes 2>&1)
         RESUME_EXIT=$?
 
         echo "Resume output:" >> "$TEST_LOG"

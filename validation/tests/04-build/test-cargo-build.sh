@@ -10,7 +10,7 @@ setup_test "cargo-build"
 
 PROMPT='Build the Rust project in fixtures/hello_repo using cargo build --release'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

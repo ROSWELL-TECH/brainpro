@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../../lib/assertions.sh"
 setup_test "plan-create"
 
 # Start plan mode, then cancel it
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "/plan Add a goodbye function to fixtures/hello_repo/src/lib.rs" \
     "/plan cancel" \
     "/exit")

@@ -315,7 +315,7 @@ pub struct PlanMetadata {
 
 /// Get the plans directory path
 pub fn plans_dir(root: &Path) -> PathBuf {
-    root.join(".yo").join("plans")
+    root.join(".brainpro").join("plans")
 }
 
 /// Save a plan to disk

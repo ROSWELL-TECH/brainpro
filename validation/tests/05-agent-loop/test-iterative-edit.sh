@@ -13,7 +13,7 @@ reset_scratch
 cp "$FIXTURES_DIR/hello_repo/src/lib.rs" "$SCRATCH_DIR/lib.rs"
 
 # Run REPL with two edit requests
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "In fixtures/scratch/lib.rs, change the function name from greet to say_hello" \
     "Now add a new function called farewell that returns the string \"Goodbye!\"" \
     "/exit")

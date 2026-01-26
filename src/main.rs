@@ -25,7 +25,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "yo", about = "An agentic coding assistant")]
+#[command(name = "brainpro", about = "An agentic coding assistant")]
 pub struct Args {
     #[arg(short, long, help = "One-shot prompt mode")]
     pub prompt: Option<String>,
@@ -212,7 +212,7 @@ fn main() -> Result<()> {
     let transcripts_dir = args
         .transcripts_dir
         .clone()
-        .unwrap_or_else(|| root.join(".yo").join("sessions"));
+        .unwrap_or_else(|| root.join(".brainpro").join("sessions"));
     std::fs::create_dir_all(&transcripts_dir)?;
 
     let session_id = uuid::Uuid::new_v4().to_string();

@@ -10,7 +10,7 @@ setup_test "grep-basic"
 
 PROMPT='Search for the word "greet" in fixtures/hello_repo/src'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

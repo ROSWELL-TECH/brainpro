@@ -10,7 +10,7 @@ setup_test "todowrite-basic"
 
 PROMPT='Create a todo list with exactly 3 tasks for adding a greeting function to fixtures/hello_repo. Use the TodoWrite tool.'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

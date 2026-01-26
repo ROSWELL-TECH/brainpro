@@ -24,7 +24,7 @@ pub fn schema(opts: &SchemaOptions) -> Value {
             "type": "function",
             "function": {
                 "name": "Glob",
-                "description": "Find files matching glob pattern. Skips .git, target, .yo dirs.",
+                "description": "Find files matching glob pattern. Skips .git, target, .brainpro dirs.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -84,7 +84,7 @@ fn is_excluded(path: &Path, root: &Path) -> bool {
     let rel = path.strip_prefix(root).unwrap_or(path);
     for component in rel.components() {
         let name = component.as_os_str().to_string_lossy();
-        if name == ".git" || name == "target" || name == ".yo" || name == "node_modules" {
+        if name == ".git" || name == "target" || name == ".brainpro" || name == "node_modules" {
             return true;
         }
     }

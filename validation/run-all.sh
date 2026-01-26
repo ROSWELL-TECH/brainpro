@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run all yo validation tests
+# Run all brainpro validation tests
 
 set -e
 
@@ -10,11 +10,11 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/assertions.sh"
 
-echo "=== yo Validation Suite ==="
+echo "=== brainpro Validation Suite ==="
 echo ""
 
 # Check prerequisites
-check_yo_binary
+check_brainpro_binary
 check_api_key
 
 echo "Results will be saved to: $RESULTS_DIR"

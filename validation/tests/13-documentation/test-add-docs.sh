@@ -1,13 +1,13 @@
 #!/bin/bash
-# Test: Ask yo to add doc comments to undocumented functions
-# Expected: yo adds /// comments to handlers.rs functions
+# Test: Ask brainpro to add doc comments to undocumented functions
+# Expected: brainpro adds /// comments to handlers.rs functions
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../lib/common.sh"
 source "$SCRIPT_DIR/../../lib/assertions.sh"
 
-check_yo_binary
+check_brainpro_binary
 
 setup_test "add-docs"
 
@@ -23,8 +23,8 @@ if grep -B1 "pub fn get_user" "$MOCK_WEBAPP_SCRATCH/src/api/handlers.rs" | head 
     exit 0
 fi
 
-# Ask yo to add documentation
-OUTPUT=$(run_yo_in_mock_webapp "Add doc comments (///) to all undocumented public functions in src/api/handlers.rs. Each function should have a brief description of what it does.")
+# Ask brainpro to add documentation
+OUTPUT=$(run_brainpro_in_mock_webapp "Add doc comments (///) to all undocumented public functions in src/api/handlers.rs. Each function should have a brief description of what it does.")
 
 # Assert handlers.rs was modified
 assert_git_dirty "$MOCK_WEBAPP_SCRATCH"

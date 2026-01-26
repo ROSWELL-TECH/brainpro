@@ -1,8 +1,8 @@
-# yo
+# brainpro
 
-An open source, local agentic butler for software development. `yo` orchestrates LLM interactions with file and shell tools, providing a secure policy engine for automated coding tasks.
+An open source, local agentic butler for software development. `brainpro` orchestrates LLM interactions with file and shell tools, providing a secure policy engine for automated coding tasks.
 
-yo features **multi-vendor, multi-model routing**, sending coding tasks to the best coding model (anthropic opus, for example) and sending planning tasks to the best planning model (qwen, for example), taking a vendor neutral, "best model wins" approach.
+brainpro features **multi-vendor, multi-model routing**, sending coding tasks to the best coding model (anthropic opus, for example) and sending planning tasks to the best planning model (qwen, for example), taking a vendor neutral, "best model wins" approach.
 
 ## Status
 
@@ -33,13 +33,13 @@ cargo build --release
 
 ```bash
 # Interactive REPL
-yo
+brainpro
 
 # One-shot prompt
-yo -p "your prompt here"
+brainpro -p "your prompt here"
 
 # With auto-approve for file edits
-yo -p "refactor main.rs" --yes
+brainpro -p "refactor main.rs" --yes
 ```
 
 ### Environment Variables
@@ -94,9 +94,9 @@ yo -p "refactor main.rs" --yes
 
 Configuration hierarchy (highest to lowest priority):
 1. CLI arguments
-2. `.yo/config.local.toml` (git-ignored)
-3. `.yo/config.toml` (project)
-4. `~/.yo/config.toml` (user)
+2. `.brainpro/config.local.toml` (git-ignored)
+3. `.brainpro/config.toml` (project)
+4. `~/.brainpro/config.toml` (user)
 5. Built-in defaults
 
 ### Config Sections
@@ -134,7 +134,7 @@ coding = "claude-3-5-sonnet-latest@claude"
 exploration = "gpt-4o-mini@chatgpt"
 ```
 
-See `example-yo.toml` for complete reference.
+See `example-brainpro.toml` for complete reference.
 
 ## Security Model
 
@@ -165,7 +165,7 @@ Subagents allow delegating tasks to specialized agents with restricted tools and
 
 ### Agent Spec Format
 
-Agent specs are stored in `.yo/agents/<name>.toml`:
+Agent specs are stored in `.brainpro/agents/<name>.toml`:
 
 ```toml
 name = "scout"
@@ -221,7 +221,7 @@ Skill packs are reusable instruction sets that guide the agent for specific task
 
 ### SKILL.md Format
 
-Skill packs are stored in `.yo/skills/<name>/SKILL.md` or `~/.yo/skills/<name>/SKILL.md`:
+Skill packs are stored in `.brainpro/skills/<name>/SKILL.md` or `~/.brainpro/skills/<name>/SKILL.md`:
 
 ```markdown
 ---
@@ -262,8 +262,8 @@ When multiple skills are active, their `allowed-tools` are intersected. Only too
 ## Slash Commands
 
 User-defined commands stored as markdown files:
-- `.yo/commands/<name>.md` (project)
-- `~/.yo/commands/<name>.md` (user)
+- `.brainpro/commands/<name>.md` (project)
+- `~/.brainpro/commands/<name>.md` (user)
 
 ### Format
 
@@ -407,7 +407,7 @@ User Input
 
 ### Transcripts
 
-Sessions logged to `.yo/sessions/<uuid>.jsonl` with events:
+Sessions logged to `.brainpro/sessions/<uuid>.jsonl` with events:
 - User/assistant messages
 - Tool calls and results
 - Permission decisions

@@ -31,7 +31,7 @@ PROMPT='Read fixtures/scratch/changes.patch and apply its contents to the target
 
 Use the Patch tool with this exact patch content and path "fixtures/scratch/example.txt"'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT" --mode acceptEdits)
+OUTPUT=$(run_brainpro_oneshot "$PROMPT" --mode acceptEdits)
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

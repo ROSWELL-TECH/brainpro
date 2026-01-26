@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 /// Source of a skill pack
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SkillSource {
-    Project, // .yo/skills/
-    User,    // ~/.yo/skills/
+    Project, // .brainpro/skills/
+    User,    // ~/.brainpro/skills/
 }
 
 /// Minimal metadata for a skill (for progressive disclosure)
@@ -36,12 +36,12 @@ impl SkillIndex {
 
         // User skills (lower priority - loaded first, overwritten by project)
         if let Some(home) = dirs::home_dir() {
-            let user_skills = home.join(".yo").join("skills");
+            let user_skills = home.join(".brainpro").join("skills");
             index.scan_dir(&user_skills, SkillSource::User);
         }
 
         // Project skills (higher priority)
-        let project_skills = project_root.join(".yo").join("skills");
+        let project_skills = project_root.join(".brainpro").join("skills");
         index.scan_dir(&project_skills, SkillSource::Project);
 
         index

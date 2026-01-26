@@ -67,9 +67,9 @@ struct VenicePriceValue {
     usd: Option<f64>,
 }
 
-/// Get the cache file path (~/.yo/venice_pricing.json)
+/// Get the cache file path (~/.brainpro/venice_pricing.json)
 fn cache_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".yo").join("venice_pricing.json"))
+    dirs::home_dir().map(|h| h.join(".brainpro").join("venice_pricing.json"))
 }
 
 /// Load cached pricing from disk
@@ -83,7 +83,7 @@ pub fn load_cache() -> Option<VenicePricingCache> {
 fn save_cache(cache: &VenicePricingCache) -> anyhow::Result<()> {
     let path = cache_path().ok_or_else(|| anyhow::anyhow!("Cannot determine home directory"))?;
 
-    // Ensure ~/.yo/ directory exists
+    // Ensure ~/.brainpro/ directory exists
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }

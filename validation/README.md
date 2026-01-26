@@ -1,10 +1,10 @@
-# yo Manual Validation Framework
+# brainpro Manual Validation Framework
 
-A comprehensive manual validation suite for testing `yo` against common Claude Code usage patterns.
+A comprehensive manual validation suite for testing `brainpro` against common Claude Code usage patterns.
 
 ## Overview
 
-This framework validates `yo` functionality by testing **outcomes** rather than exact LLM outputs. Since LLM responses are non-deterministic, tests focus on:
+This framework validates `brainpro` functionality by testing **outcomes** rather than exact LLM outputs. Since LLM responses are non-deterministic, tests focus on:
 
 - File existence and content (did the expected file get created?)
 - Tool invocation (was the right tool called?)
@@ -13,7 +13,7 @@ This framework validates `yo` functionality by testing **outcomes** rather than 
 
 ## Prerequisites
 
-1. **Build yo**:
+1. **Build brainpro**:
    ```bash
    cargo build --release
    ```
@@ -95,9 +95,9 @@ setup_test "my-test-name"
 # Optional: reset scratch directory
 reset_scratch
 
-# Run yo
+# Run brainpro
 PROMPT='Your prompt here'
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 # Assertions
@@ -111,9 +111,9 @@ report_result
 ### Available Functions
 
 **common.sh:**
-- `run_yo_oneshot "prompt" [args...]` - Run yo in -p mode
-- `run_yo_repl "cmd1" "cmd2" ...` - Run yo REPL with piped input
-- `run_yo_in_mock_webapp "prompt" [args...]` - Run yo in mock_webapp_scratch
+- `run_brainpro_oneshot "prompt" [args...]` - Run brainpro in -p mode
+- `run_brainpro_repl "cmd1" "cmd2" ...` - Run brainpro REPL with piped input
+- `run_brainpro_in_mock_webapp "prompt" [args...]` - Run brainpro in mock_webapp_scratch
 - `reset_scratch` - Clean fixtures/scratch directory
 - `reset_mock_webapp` - Fresh copy of mock_webapp to scratch
 - `cleanup_mock_webapp` - Remove mock_webapp_scratch
@@ -169,7 +169,7 @@ Results are saved to `validation/results/YYYY-MM-DD-HHMMSS/`:
 
 ## Troubleshooting
 
-### Test fails with "yo binary not found"
+### Test fails with "brainpro binary not found"
 ```bash
 cargo build --release
 ```

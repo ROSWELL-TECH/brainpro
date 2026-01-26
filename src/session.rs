@@ -18,7 +18,7 @@ pub struct SavedSession {
 fn sessions_dir() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join(".yo")
+        .join(".brainpro")
         .join("sessions")
 }
 

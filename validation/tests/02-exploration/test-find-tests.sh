@@ -10,7 +10,7 @@ setup_test "find-tests"
 
 PROMPT='Find the tests defined in fixtures/hello_repo and list their names'
 
-OUTPUT=$(run_yo_oneshot "$PROMPT")
+OUTPUT=$(run_brainpro_oneshot "$PROMPT")
 EXIT_CODE=$?
 
 assert_exit_code 0 "$EXIT_CODE"

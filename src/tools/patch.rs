@@ -74,7 +74,9 @@ pub fn execute(args: Value, root: &Path) -> anyhow::Result<Value> {
         } else if !original.is_empty() && original != "/dev/null" {
             original
         } else {
-            return Ok(json!({ "error": { "code": "invalid_patch", "message": "No target path in patch headers and no path provided" } }));
+            return Ok(
+                json!({ "error": { "code": "invalid_patch", "message": "No target path in patch headers and no path provided" } }),
+            );
         };
 
         // Strip a/ or b/ prefix (git diff format)
@@ -97,9 +99,7 @@ pub fn execute(args: Value, root: &Path) -> anyhow::Result<Value> {
         match std::fs::read_to_string(&full_path) {
             Ok(s) => s,
             Err(e) => {
-                return Ok(
-                    json!({ "error": { "code": "read_error", "message": e.to_string() } }),
-                )
+                return Ok(json!({ "error": { "code": "read_error", "message": e.to_string() } }))
             }
         }
     };
@@ -166,11 +166,7 @@ mod tests {
 
     fn setup_test_dir() -> TempDir {
         let dir = TempDir::new().unwrap();
-        fs::write(
-            dir.path().join("test.txt"),
-            "line 1\nline 2\nline 3\n",
-        )
-        .unwrap();
+        fs::write(dir.path().join("test.txt"), "line 1\nline 2\nline 3\n").unwrap();
         dir
     }
 

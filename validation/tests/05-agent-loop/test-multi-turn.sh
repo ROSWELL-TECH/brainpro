@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../../lib/assertions.sh"
 setup_test "multi-turn"
 
 # Run REPL with two related questions
-OUTPUT=$(run_yo_repl \
+OUTPUT=$(run_brainpro_repl \
     "What is the name of the function in fixtures/hello_repo/src/lib.rs?" \
     "What does that function return?" \
     "/exit")

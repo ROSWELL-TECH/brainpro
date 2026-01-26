@@ -352,42 +352,42 @@ impl Config {
     }
 
     /// Load configuration from default paths
-    /// Priority: local (.yo/config.local.toml) > project (.yo/config.toml) > user (~/.yo/config.toml)
+    /// Priority: local (.brainpro/config.local.toml) > project (.brainpro/config.toml) > user (~/.brainpro/config.toml)
     /// Starts with built-in backends, then merges user/project/local configs
-    /// Also loads agents from .yo/agents/ and ~/.yo/agents/
+    /// Also loads agents from .brainpro/agents/ and ~/.brainpro/agents/
     pub fn load() -> Result<Self> {
         let mut config = Self::with_builtin_backends();
 
         // Try user-level config first
         if let Some(home) = dirs::home_dir() {
-            let user_config = home.join(".yo").join("config.toml");
+            let user_config = home.join(".brainpro").join("config.toml");
             if user_config.exists() {
                 let user = Self::load_from(&user_config)?;
                 config.merge(user);
             }
 
-            // Load user-level agents (~/.yo/agents/)
-            let user_agents_dir = home.join(".yo").join("agents");
+            // Load user-level agents (~/.brainpro/agents/)
+            let user_agents_dir = home.join(".brainpro").join("agents");
             for (name, spec) in load_agents_from_dir(&user_agents_dir) {
                 config.agents.insert(name, spec);
             }
         }
 
         // Try project-level config (overrides user-level)
-        let project_config = Path::new(".yo").join("config.toml");
+        let project_config = Path::new(".brainpro").join("config.toml");
         if project_config.exists() {
             let project = Self::load_from(&project_config)?;
             config.merge(project);
         }
 
-        // Load project-level agents (.yo/agents/) - overrides user-level
-        let project_agents_dir = Path::new(".yo").join("agents");
+        // Load project-level agents (.brainpro/agents/) - overrides user-level
+        let project_agents_dir = Path::new(".brainpro").join("agents");
         for (name, spec) in load_agents_from_dir(&project_agents_dir) {
             config.agents.insert(name, spec);
         }
 
         // Try local config (overrides project-level, should be gitignored)
-        let local_config = Path::new(".yo").join("config.local.toml");
+        let local_config = Path::new(".brainpro").join("config.local.toml");
         if local_config.exists() {
             let local = Self::load_from(&local_config)?;
             config.merge(local);
@@ -566,12 +566,12 @@ impl Config {
         }
     }
 
-    /// Save permissions to local config file (.yo/config.local.toml)
-    /// Creates the .yo directory if it doesn't exist
+    /// Save permissions to local config file (.brainpro/config.local.toml)
+    /// Creates the .brainpro directory if it doesn't exist
     pub fn save_local_permissions(&self) -> Result<()> {
-        let yo_dir = Path::new(".yo");
-        if !yo_dir.exists() {
-            std::fs::create_dir_all(yo_dir)?;
+        let brainpro_dir = Path::new(".brainpro");
+        if !brainpro_dir.exists() {
+            std::fs::create_dir_all(brainpro_dir)?;
         }
 
         // Create a minimal config with just permissions
@@ -580,7 +580,7 @@ impl Config {
         };
 
         let content = toml::to_string_pretty(&local_config)?;
-        std::fs::write(yo_dir.join("config.local.toml"), content)?;
+        std::fs::write(brainpro_dir.join("config.local.toml"), content)?;
         Ok(())
     }
 }

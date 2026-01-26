@@ -12,8 +12,8 @@ reset_scratch
 # Run WITHOUT --yes flag - call binary directly to avoid auto-approval
 # Pipe 'n' to decline any permission prompt
 PROMPT="Write 'test' to fixtures/scratch/blocked.txt"
-echo "Command: $YO_BIN -p \"$PROMPT\" (no --yes)" >> "$TEST_LOG"
-OUTPUT=$(echo "n" | "$YO_BIN" -p "$PROMPT" 2>&1)
+echo "Command: $BRAINPRO_BIN -p \"$PROMPT\" (no --yes)" >> "$TEST_LOG"
+OUTPUT=$(echo "n" | "$BRAINPRO_BIN" -p "$PROMPT" 2>&1)
 EXIT_CODE=$?
 echo "Exit code: $EXIT_CODE" >> "$TEST_LOG"
 echo "Output:" >> "$TEST_LOG"
