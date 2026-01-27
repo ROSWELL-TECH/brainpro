@@ -1,7 +1,11 @@
 use anyhow::Result;
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
+
+use crate::privacy::PrivacyConfig;
+use crate::provider_health::HealthConfig;
 
 /// A validation error in the configuration
 #[derive(Debug, Clone)]
@@ -243,30 +247,112 @@ pub struct BackendConfig {
     pub api_key_env: Option<String>,
     #[serde(default)]
     pub api_key: Option<String>,
+    /// Whether this backend supports Zero Data Retention
+    #[serde(default)]
+    pub zdr: bool,
+}
+
+/// Fallback chain configuration for automatic failover
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct FallbackChainsConfig {
+    /// Primary target (model@backend)
+    #[serde(default)]
+    pub primary: Option<String>,
+    /// Secondary target for failover
+    #[serde(default)]
+    pub secondary: Option<String>,
+    /// Local fallback (typically Ollama)
+    #[serde(default)]
+    pub local: Option<String>,
+    /// Auto-fallback to local when all cloud providers exhausted
+    #[serde(default = "default_auto_local_fallback")]
+    pub auto_local_fallback: bool,
+    /// Category-specific chain overrides
+    #[serde(default)]
+    pub category_overrides: HashMap<String, CategoryFallbackConfig>,
+}
+
+fn default_auto_local_fallback() -> bool {
+    true
+}
+
+/// Category-specific fallback configuration
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CategoryFallbackConfig {
+    /// Ordered list of targets to try
+    pub chain: Vec<String>,
+}
+
+impl FallbackChainsConfig {
+    /// Get the fallback chain for a given category
+    pub fn get_chain(&self, category: Option<&str>) -> Vec<Target> {
+        // Check for category override first
+        if let Some(cat) = category {
+            if let Some(override_config) = self.category_overrides.get(cat) {
+                return override_config
+                    .chain
+                    .iter()
+                    .filter_map(|s| Target::parse(s))
+                    .collect();
+            }
+        }
+
+        // Build default chain
+        let mut chain = Vec::new();
+        if let Some(primary) = &self.primary {
+            if let Some(target) = Target::parse(primary) {
+                chain.push(target);
+            }
+        }
+        if let Some(secondary) = &self.secondary {
+            if let Some(target) = Target::parse(secondary) {
+                chain.push(target);
+            }
+        }
+        if self.auto_local_fallback {
+            if let Some(local) = &self.local {
+                if let Some(target) = Target::parse(local) {
+                    chain.push(target);
+                }
+            } else {
+                // Default local fallback
+                chain.push(Target {
+                    model: "llama3:8b".to_string(),
+                    backend: "ollama".to_string(),
+                });
+            }
+        }
+        chain
+    }
 }
 
 impl BackendConfig {
-    /// Resolve the API key from config or environment
-    /// Returns "ollama" as a dummy key for backends that don't require authentication
-    pub fn resolve_api_key(&self) -> Result<String> {
-        // Direct key takes priority
-        if let Some(key) = &self.api_key {
-            return Ok(key.clone());
-        }
-
-        // Try environment variable
+    /// Resolve the API key from environment or config, wrapped in SecretString for security.
+    /// Environment variables take priority over config file values.
+    /// Returns "ollama" as a dummy key for backends that don't require authentication.
+    ///
+    /// Security: The returned SecretString will zeroize memory on drop and won't
+    /// accidentally leak via Debug/Display.
+    pub fn resolve_api_key(&self) -> Result<SecretString> {
+        // Environment variable takes priority (more secure than config file)
         if let Some(env_var) = &self.api_key_env {
             if let Ok(key) = std::env::var(env_var) {
-                return Ok(key);
+                return Ok(SecretString::from(key));
             }
+        }
+
+        // Fall back to config file key (less secure, warn in docs)
+        if let Some(key) = &self.api_key {
+            return Ok(SecretString::from(key.clone()));
         }
 
         // For backends like Ollama that don't require auth, return a dummy key
         // (Ollama requires an API key header but ignores its value)
-        Ok("ollama".to_string())
+        Ok(SecretString::from("ollama"))
     }
 }
 
+use crate::circuit_breaker::CircuitBreakerConfig;
 use crate::cost::{CostConfig, ModelPricing};
 use crate::model_routing::ModelRoutingConfig;
 
@@ -291,6 +377,14 @@ pub struct Config {
     pub cost_tracking: CostConfig,
     #[serde(default)]
     pub model_pricing: HashMap<String, ModelPricing>,
+    #[serde(default)]
+    pub circuit_breaker: CircuitBreakerConfig,
+    #[serde(default)]
+    pub fallback_chains: FallbackChainsConfig,
+    #[serde(default)]
+    pub health: HealthConfig,
+    #[serde(default)]
+    pub privacy: PrivacyConfig,
     #[serde(skip)]
     pub agents: HashMap<String, AgentSpec>,
 }
@@ -300,40 +394,47 @@ impl Config {
     pub fn with_builtin_backends() -> Self {
         let mut backends = HashMap::new();
 
-        // Venice: try multiple env var names for flexibility
+        // Venice: ZDR policy, try multiple env var names for flexibility
         backends.insert(
             "venice".to_string(),
             BackendConfig {
                 base_url: "https://api.venice.ai/api/v1".to_string(),
                 api_key_env: Some("VENICE_API_KEY".to_string()),
                 api_key: std::env::var("venice_api_key").ok(), // fallback to lowercase
+                zdr: true, // Venice has ZDR policy
             },
         );
 
+        // OpenAI/ChatGPT: may train on data
         backends.insert(
             "chatgpt".to_string(),
             BackendConfig {
                 base_url: "https://api.openai.com/v1".to_string(),
                 api_key_env: Some("OPENAI_API_KEY".to_string()),
                 api_key: None,
+                zdr: false,
             },
         );
 
+        // Anthropic/Claude: has ZDR option
         backends.insert(
             "claude".to_string(),
             BackendConfig {
                 base_url: "https://api.anthropic.com/v1".to_string(),
                 api_key_env: Some("ANTHROPIC_API_KEY".to_string()),
                 api_key: None,
+                zdr: true,
             },
         );
 
+        // Ollama: local = inherently ZDR
         backends.insert(
             "ollama".to_string(),
             BackendConfig {
                 base_url: "http://localhost:11434/v1".to_string(),
                 api_key_env: None,
                 api_key: None,
+                zdr: true,
             },
         );
 
@@ -347,6 +448,10 @@ impl Config {
             hooks: Vec::new(),
             cost_tracking: CostConfig::default(),
             model_pricing: HashMap::new(),
+            circuit_breaker: CircuitBreakerConfig::default(),
+            fallback_chains: FallbackChainsConfig::default(),
+            health: HealthConfig::default(),
+            privacy: PrivacyConfig::default(),
             agents: HashMap::new(),
         }
     }
@@ -448,6 +553,31 @@ impl Config {
         for (model, pricing) in other.model_pricing {
             self.model_pricing.insert(model, pricing);
         }
+
+        // Merge circuit breaker config (take other's values)
+        self.circuit_breaker = other.circuit_breaker;
+
+        // Merge fallback chains (take other's values, merge category overrides)
+        if other.fallback_chains.primary.is_some() {
+            self.fallback_chains.primary = other.fallback_chains.primary;
+        }
+        if other.fallback_chains.secondary.is_some() {
+            self.fallback_chains.secondary = other.fallback_chains.secondary;
+        }
+        if other.fallback_chains.local.is_some() {
+            self.fallback_chains.local = other.fallback_chains.local;
+        }
+        // Always take other's auto_local_fallback setting
+        self.fallback_chains.auto_local_fallback = other.fallback_chains.auto_local_fallback;
+        for (cat, config) in other.fallback_chains.category_overrides {
+            self.fallback_chains.category_overrides.insert(cat, config);
+        }
+
+        // Merge health config (take other's values)
+        self.health = other.health;
+
+        // Merge privacy config (take other's values)
+        self.privacy = other.privacy;
     }
 
     /// Get the default target
@@ -474,6 +604,9 @@ impl Config {
             "venice" // Default fallback
         };
 
+        // Determine ZDR status based on backend
+        let zdr = matches!(backend_name, "venice" | "claude" | "ollama");
+
         // Override that backend with CLI-provided values
         config.backends.insert(
             backend_name.to_string(),
@@ -481,6 +614,7 @@ impl Config {
                 base_url: base_url.to_string(),
                 api_key: Some(api_key.to_string()),
                 api_key_env: None,
+                zdr,
             },
         );
 

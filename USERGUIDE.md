@@ -265,21 +265,25 @@ services:
 # Default LLM target
 default_target = "qwen3-235b-a22b-instruct-2507@venice"
 
-# Backend definitions
+# Backend definitions (zdr = Zero Data Retention policy)
 [backends.venice]
 base_url = "https://api.venice.ai/api/v1"
 api_key_env = "VENICE_API_KEY"
+zdr = true
 
 [backends.claude]
 base_url = "https://api.anthropic.com/v1"
 api_key_env = "ANTHROPIC_API_KEY"
+zdr = true
 
 [backends.chatgpt]
 base_url = "https://api.openai.com/v1"
 api_key_env = "OPENAI_API_KEY"
+zdr = false  # OpenAI may train on data
 
 [backends.ollama]
 base_url = "http://localhost:11434/v1"
+zdr = true   # Local = inherently ZDR
 # No API key needed for local Ollama
 
 # Permission rules
@@ -310,6 +314,37 @@ exploration = "gpt-4o-mini@chatgpt"
 command = "/path/to/mcp-calc"
 transport = "stdio"
 auto_start = false
+
+# Circuit breaker (protects against cascading failures)
+[circuit_breaker]
+failure_threshold = 5      # Consecutive failures to open
+recovery_timeout_secs = 30 # Seconds before half-open
+half_open_probes = 3       # Successful probes to close
+enabled = true
+
+# Provider health tracking
+[health]
+degraded_latency_ms = 5000      # Latency threshold for degraded
+unhealthy_failures = 3          # Consecutive failures for unhealthy
+cooldown_secs = 60              # Cooldown period after unhealthy
+latency_window_size = 10        # Sliding window for avg latency
+
+# Fallback chains (automatic failover)
+[fallback_chains]
+primary = "claude-3-5-sonnet-latest@claude"
+secondary = "gpt-4o@chatgpt"
+local = "llama3:8b@ollama"
+auto_local_fallback = true  # Fallback to Ollama when cloud exhausted
+
+[fallback_chains.category_overrides.coding]
+chain = ["claude@claude", "gpt-4o@chatgpt"]
+
+# Privacy / Zero Data Retention
+[privacy]
+default_level = "sensitive"  # standard|sensitive|strict
+audit_zdr_violations = true
+prefer_local_for_sensitive = true
+strict_patterns = ["password", "secret", "api_key", "token"]
 ```
 
 ### Model Routing
@@ -451,3 +486,126 @@ Never modify files. Only report findings.
 ```
 
 Activate: `/skillpack use secure-review`
+
+---
+
+## Part 7: Resilience & Privacy
+
+### Circuit Breaker
+
+Protects against cascading failures when backends are unhealthy.
+
+**States**: Closed → Open → HalfOpen → Closed
+
+- **Closed**: Normal operation, requests pass through
+- **Open**: Failures exceeded threshold, requests rejected immediately
+- **HalfOpen**: Recovery period, limited probe requests
+
+```toml
+[circuit_breaker]
+failure_threshold = 5      # Consecutive failures to trip open
+recovery_timeout_secs = 30 # Time before attempting recovery
+half_open_probes = 3       # Successful probes needed to close
+enabled = true
+```
+
+### Provider Health Tracking
+
+Monitors backend health for intelligent routing decisions.
+
+**Health States**:
+- `Healthy`: Normal latency, no failures
+- `Degraded`: High latency or intermittent failures
+- `Unhealthy`: Consistent failures, in cooldown
+
+```toml
+[health]
+degraded_latency_ms = 5000  # Latency threshold for degraded state
+unhealthy_failures = 3      # Failures before marking unhealthy
+cooldown_secs = 60          # Cooldown before retry
+latency_window_size = 10    # Sliding window for latency calculation
+```
+
+### Fallback Chains
+
+Automatic failover when primary providers fail.
+
+```toml
+[fallback_chains]
+primary = "claude-3-5-sonnet-latest@claude"
+secondary = "gpt-4o@chatgpt"
+local = "llama3:8b@ollama"
+auto_local_fallback = true  # Fallback to Ollama when cloud exhausted
+
+# Override for specific task categories
+[fallback_chains.category_overrides.coding]
+chain = ["claude@claude", "gpt-4o@chatgpt"]
+```
+
+Fallback triggers:
+- Circuit breaker open
+- Provider unhealthy
+- Rate limited (429)
+- Server error (5xx)
+
+### Zero Data Retention (ZDR)
+
+Privacy-first routing ensures sensitive data stays with trusted providers.
+
+**Privacy Levels**:
+| Level | Behavior |
+|-------|----------|
+| `standard` | Any provider acceptable |
+| `sensitive` | Prefer ZDR providers, warn if non-ZDR used |
+| `strict` | ZDR-only providers, fail if unavailable |
+
+**Configuration**:
+```toml
+[privacy]
+default_level = "sensitive"
+audit_zdr_violations = true
+prefer_local_for_sensitive = true
+strict_patterns = ["password", "secret", "api_key", "token", "ssn"]
+```
+
+**Backend ZDR flags**:
+```toml
+[backends.venice]
+zdr = true   # Venice has ZDR policy
+
+[backends.claude]
+zdr = true   # Anthropic has ZDR option
+
+[backends.chatgpt]
+zdr = false  # OpenAI may train on data
+
+[backends.ollama]
+zdr = true   # Local = inherently ZDR
+```
+
+**Auto-escalation**: Prompts containing `strict_patterns` auto-escalate to `strict` level.
+
+### Credential Security
+
+- API keys stored via environment variables (preferred) or config
+- Keys wrapped in `SecretString` (zeroized on drop)
+- Credentials never logged or displayed
+- TLS 1.2+ enforced for all connections
+
+Best practice:
+```bash
+# Use environment variables, not config files
+export ANTHROPIC_API_KEY="sk-..."
+export VENICE_API_KEY="..."
+```
+
+### Observability
+
+Prometheus metrics available at `/metrics` (gateway mode):
+- `brainpro_requests_total{backend,model,status}`
+- `brainpro_requests_duration_ms{backend,model}`
+- `brainpro_circuit_trips_total{backend}`
+- `brainpro_tokens_total{backend,model,direction}`
+- `brainpro_cost_usd_total{backend,model}`
+
+JSON export: `~/.brainpro/metrics.json`

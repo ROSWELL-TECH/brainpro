@@ -176,15 +176,126 @@ Backends are lazy-loaded on first use.
 [backends.venice]
 base_url = "https://api.venice.ai/api/v1"
 api_key_env = "VENICE_API_KEY"
+zdr = true  # Zero Data Retention policy
 
 [backends.claude]
 base_url = "https://api.anthropic.com/v1"
 api_key_env = "ANTHROPIC_API_KEY"
+zdr = true
 ```
 
 **Built-in backends**: Venice (default), OpenAI, Anthropic, Ollama
 
 **Target format**: `model@backend` (e.g., `claude-3-5-sonnet-latest@claude`)
+
+## Resilience Architecture
+
+### Circuit Breaker
+
+Protects against cascading failures when backends are unhealthy.
+
+```
+States: Closed → Open → HalfOpen → Closed
+
+Closed:    Normal operation, requests pass through
+Open:      Failures exceeded threshold, requests rejected
+HalfOpen:  Recovery period, limited probe requests
+```
+
+**Configuration**:
+```toml
+[circuit_breaker]
+failure_threshold = 5      # Consecutive failures to open
+recovery_timeout_secs = 30 # Seconds before half-open
+half_open_probes = 3       # Successful probes to close
+enabled = true
+```
+
+### Provider Health Tracking
+
+Monitors backend health for intelligent routing.
+
+**Health States**:
+- `Healthy`: Normal latency, no failures
+- `Degraded`: High latency or intermittent failures
+- `Unhealthy`: Consistent failures, in cooldown
+
+**Tracked Metrics**:
+- Consecutive failures/successes
+- Average latency (sliding window)
+- Cooldown expiry time
+
+### Fallback Chains
+
+Automatic failover when primary providers fail.
+
+```toml
+[fallback_chains]
+primary = "claude-3-5-sonnet-latest@claude"
+secondary = "gpt-4o@chatgpt"
+local = "llama3:8b@ollama"
+auto_local_fallback = true  # Fallback to Ollama when cloud exhausted
+
+[fallback_chains.category_overrides.coding]
+chain = ["claude@claude", "gpt-4o@chatgpt"]
+```
+
+### Retry with Jittered Backoff
+
+HTTP retries use exponential backoff with jitter:
+- Initial: 1s, Max: 60s
+- Jitter: ±30% randomization
+- Respects `Retry-After` headers (429 responses)
+- Retries: 429 (rate limit), 5xx (server errors)
+
+## Privacy & Zero Data Retention
+
+### Privacy Levels
+
+| Level | Behavior |
+|-------|----------|
+| `standard` | Any provider acceptable |
+| `sensitive` | Prefer ZDR providers, warn if non-ZDR used |
+| `strict` | ZDR-only providers, fail if unavailable |
+
+### Sensitive Pattern Detection
+
+Auto-escalates to `strict` when prompts contain:
+- `password`, `secret`, `api_key`, `token`
+- `ssn`, `credit_card`, `private_key`
+- `-----BEGIN` (PEM keys)
+
+### ZDR Provider Registry
+
+```toml
+[backends.venice]
+zdr = true   # Venice has ZDR policy
+
+[backends.chatgpt]
+zdr = false  # OpenAI may train on data
+
+[backends.ollama]
+zdr = true   # Local = inherently ZDR
+```
+
+### Credential Security
+
+- Environment variables preferred over config files
+- API keys wrapped in `SecretString` (zeroized on drop)
+- Secrets never logged or displayed via Debug
+
+## Observability
+
+### Metrics
+
+Prometheus-compatible metrics at `/metrics`:
+- `brainpro_requests_total{backend,model,status}`
+- `brainpro_requests_duration_ms{backend,model}`
+- `brainpro_circuit_trips_total{backend}`
+- `brainpro_tokens_total{backend,model,direction}`
+- `brainpro_cost_usd_total{backend,model}`
+
+JSON export: `~/.brainpro/metrics.json`
 
 ## Policy Engine
 

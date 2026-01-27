@@ -11,6 +11,14 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::cost::ModelPricing;
 
+/// Shared reqwest client for Venice API calls
+fn http_client() -> reqwest::blocking::Client {
+    reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .expect("Failed to create HTTP client")
+}
+
 /// Cache expiry duration (1 week)
 const CACHE_MAX_AGE_SECS: u64 = 7 * 24 * 60 * 60;
 
@@ -95,12 +103,8 @@ fn save_cache(cache: &VenicePricingCache) -> anyhow::Result<()> {
 
 /// Fetch current pricing from Venice API
 fn fetch_from_api() -> anyhow::Result<HashMap<String, ModelPricing>> {
-    let agent = ureq::Agent::new();
-    let resp: VeniceModelsResponse = agent
-        .get(VENICE_MODELS_URL)
-        .timeout(Duration::from_secs(10))
-        .call()?
-        .into_json()?;
+    let client = http_client();
+    let resp: VeniceModelsResponse = client.get(VENICE_MODELS_URL).send()?.json()?;
 
     let mut models = HashMap::new();
 

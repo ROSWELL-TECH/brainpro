@@ -3,7 +3,8 @@ use crate::llm::Client;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
-/// Registry of backends with lazy-loaded clients
+/// Registry of backends with lazy-loaded clients.
+/// API keys are stored securely using secrecy::Secret.
 pub struct BackendRegistry {
     backends: HashMap<String, BackendConfig>,
     clients: HashMap<String, Client>,
@@ -18,7 +19,8 @@ impl BackendRegistry {
         }
     }
 
-    /// Get or create a client for a backend
+    /// Get or create a client for a backend.
+    /// API keys are resolved and wrapped in Secret for secure memory handling.
     pub fn get_client(&mut self, backend: &str) -> Result<&Client> {
         if !self.clients.contains_key(backend) {
             let config = self
@@ -26,6 +28,7 @@ impl BackendRegistry {
                 .get(backend)
                 .ok_or_else(|| anyhow!("Unknown backend: {}", backend))?;
 
+            // Resolve API key - returns Secret<String> for secure handling
             let api_key = config.resolve_api_key().map_err(|_| {
                 anyhow!(
                     "No API key for backend '{}'. Set {} or configure api_key in config.",
@@ -37,7 +40,8 @@ impl BackendRegistry {
                 )
             })?;
 
-            let client = Client::new(&config.base_url, &api_key);
+            // Create client with the secret API key
+            let client = Client::new(&config.base_url, api_key);
             self.clients.insert(backend.to_string(), client);
         }
 
