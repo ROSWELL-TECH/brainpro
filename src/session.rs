@@ -16,6 +16,9 @@ pub struct SavedSession {
 
 /// Get the sessions directory
 fn sessions_dir() -> PathBuf {
+    if let Ok(data_dir) = std::env::var("BRAINPRO_DATA_DIR") {
+        return PathBuf::from(data_dir).join("sessions");
+    }
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".brainpro")

@@ -3,8 +3,7 @@
 use crate::gateway::agent_conn::AsyncAgentConnection;
 use crate::gateway::client_mgr::{ClientManager, ClientMessage};
 use crate::protocol::client::{
-    events, methods, ClientCapabilities, ClientEvent, ClientRequest, ClientResponse, ClientRole,
-    Hello, PolicyInfo, Welcome,
+    events, methods, ClientEvent, ClientRequest, ClientResponse, Hello, PolicyInfo, Welcome,
 };
 use crate::protocol::internal::{AgentEventType, AgentRequest};
 use axum::{

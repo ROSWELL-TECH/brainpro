@@ -201,7 +201,7 @@ mod tests {
         let args = json!({ "patch": patch });
         let result = execute(args, dir.path()).unwrap();
 
-        assert_eq!(result["success"].as_bool().unwrap(), true);
+        assert!(result["success"].as_bool().unwrap());
         assert_eq!(result["files_modified"].as_i64().unwrap(), 1);
         assert_eq!(result["files"][0]["hunks_applied"].as_i64().unwrap(), 1);
 
@@ -222,7 +222,7 @@ mod tests {
         let args = json!({ "patch": patch, "path": "test.txt" });
         let result = execute(args, dir.path()).unwrap();
 
-        assert_eq!(result["success"].as_bool().unwrap(), true);
+        assert!(result["success"].as_bool().unwrap());
 
         let content = fs::read_to_string(dir.path().join("test.txt")).unwrap();
         assert!(content.contains("inserted"));
@@ -244,8 +244,8 @@ mod tests {
         let args = json!({ "patch": patch, "dry_run": true });
         let result = execute(args, dir.path()).unwrap();
 
-        assert_eq!(result["success"].as_bool().unwrap(), true);
-        assert_eq!(result["dry_run"].as_bool().unwrap(), true);
+        assert!(result["success"].as_bool().unwrap());
+        assert!(result["dry_run"].as_bool().unwrap());
         assert_eq!(result["files_modified"].as_i64().unwrap(), 0);
 
         // File should be unchanged

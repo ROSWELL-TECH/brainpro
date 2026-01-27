@@ -497,7 +497,7 @@ fn handle_command(ctx: &Context, cmd: &str, messages: &mut Vec<serde_json::Value
         "/mode" => {
             if parts.len() > 1 {
                 let mode_str = parts[1].trim();
-                if let Some(mode) = PermissionMode::from_str(mode_str) {
+                if let Some(mode) = PermissionMode::parse(mode_str) {
                     ctx.policy.borrow_mut().set_mode(mode);
                     println!("Permission mode: {}", mode.as_str());
                 } else {

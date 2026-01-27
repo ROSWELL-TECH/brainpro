@@ -89,7 +89,7 @@ impl ClientManager {
         // Add to session's client list
         self.sessions
             .entry(session_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(client_id.to_string());
     }
 

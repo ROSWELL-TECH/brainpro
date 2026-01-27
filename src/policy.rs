@@ -343,8 +343,10 @@ mod tests {
 
     #[test]
     fn test_accept_edits_mode() {
-        let mut config = PermissionsConfig::default();
-        config.mode = PermissionMode::AcceptEdits;
+        let config = PermissionsConfig {
+            mode: PermissionMode::AcceptEdits,
+            ..Default::default()
+        };
         let engine = PolicyEngine::new(config, false, false);
 
         let (decision, _) = engine.decide("Write", &json!({"path": "foo.txt"}));

@@ -27,7 +27,6 @@ use anyhow::Result;
 use clap::Parser;
 use cli::Args;
 use std::cell::RefCell;
-use std::path::PathBuf;
 
 fn main() -> Result<()> {
     dotenvy::dotenv().ok();
@@ -114,7 +113,7 @@ fn main() -> Result<()> {
 
     // Apply CLI permission overrides
     if let Some(mode_str) = &args.mode {
-        if let Some(mode) = config::PermissionMode::from_str(mode_str) {
+        if let Some(mode) = config::PermissionMode::parse(mode_str) {
             cfg.permissions.mode = mode;
         } else {
             return Err(anyhow::anyhow!(

@@ -168,12 +168,6 @@ fn handle_connection(
     Ok(())
 }
 
-/// Run the agent server with default configuration
-pub fn run_default() -> std::io::Result<()> {
-    let server = AgentServer::new(AgentServerConfig::default());
-    server.run()
-}
-
 /// Run the agent server with a custom socket path
 pub fn run_with_socket(socket_path: &str) -> std::io::Result<()> {
     let server = AgentServer::new(AgentServerConfig {

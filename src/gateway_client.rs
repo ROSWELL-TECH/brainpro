@@ -1,6 +1,6 @@
 //! Gateway client for connecting CLI to gateway via WebSocket.
 
-use crate::protocol::client::{events, methods, ClientCapabilities, ClientRole};
+use crate::protocol::client::methods;
 use anyhow::{anyhow, Result};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
@@ -39,7 +39,7 @@ async fn run_gateway_async(gateway_url: &str, prompt: Option<&str>) -> Result<()
     });
 
     write
-        .send(Message::Text(hello.to_string().into()))
+        .send(Message::Text(hello.to_string()))
         .await
         .map_err(|e| anyhow!("Failed to send hello: {}", e))?;
 
@@ -161,7 +161,7 @@ async fn send_chat_and_stream(
     });
 
     write
-        .send(Message::Text(request.to_string().into()))
+        .send(Message::Text(request.to_string()))
         .await
         .map_err(|e| anyhow!("Failed to send request: {}", e))?;
 

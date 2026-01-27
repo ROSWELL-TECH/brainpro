@@ -53,7 +53,7 @@ fn default_hook_timeout() -> u64 {
 }
 
 impl PermissionMode {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "default" => Some(Self::Default),
             "acceptedits" | "accept-edits" | "accept_edits" => Some(Self::AcceptEdits),
@@ -128,7 +128,7 @@ fn default_max_turns() -> usize {
 impl AgentSpec {
     /// Get the parsed permission mode
     pub fn get_permission_mode(&self) -> PermissionMode {
-        PermissionMode::from_str(&self.permission_mode).unwrap_or(PermissionMode::Default)
+        PermissionMode::parse(&self.permission_mode).unwrap_or(PermissionMode::Default)
     }
 
     /// Load agent spec from a TOML file
@@ -532,7 +532,7 @@ impl Config {
                 });
             }
             // Validate permission_mode is recognized
-            if PermissionMode::from_str(&spec.permission_mode).is_none() {
+            if PermissionMode::parse(&spec.permission_mode).is_none() {
                 errors.push(ValidationError {
                     field: format!("agents.{}.permission_mode", name),
                     message: format!("Invalid permission mode '{}'", spec.permission_mode),
