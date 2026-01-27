@@ -92,9 +92,9 @@ for category in "${CATEGORIES[@]}"; do
 
             # Run the test and track result
             if bash "$test_script"; then
-                ((LOCAL_PASSED++))
+                LOCAL_PASSED=$((LOCAL_PASSED + 1))
             else
-                ((LOCAL_FAILED++))
+                LOCAL_FAILED=$((LOCAL_FAILED + 1))
             fi
         fi
     done

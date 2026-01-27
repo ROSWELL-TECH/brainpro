@@ -1,13 +1,14 @@
 //! LLM client with retry logic, jittered backoff, and connection pooling.
 //!
-//! Uses reqwest for async HTTP with tokio::runtime::Handle::block_on for
-//! synchronous callers.
+//! Uses reqwest::blocking for synchronous HTTP calls with built-in
+//! connection pooling and timeout handling.
 
 use anyhow::{anyhow, Result};
 use rand::Rng;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::thread;
 use std::time::Duration;
 
 // Retry configuration for rate limiting and transient errors
@@ -114,33 +115,28 @@ pub struct Client {
     /// API key wrapped in SecretString for secure memory handling.
     /// Will be zeroized on drop and won't leak via Debug/Display.
     api_key: SecretString,
-    http_client: reqwest::Client,
-    runtime: tokio::runtime::Handle,
+    http_client: reqwest::blocking::Client,
 }
 
 impl Client {
     /// Create a new LLM client.
     /// The API key is stored as a SecretString for secure memory handling.
     pub fn new(base_url: &str, api_key: SecretString) -> Self {
-        let http_client = reqwest::Client::builder()
+        let http_client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(120))
             .pool_max_idle_per_host(10)
             .build()
             .expect("Failed to create HTTP client");
 
-        // Get a handle to the current tokio runtime
-        let runtime = tokio::runtime::Handle::current();
-
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             api_key,
             http_client,
-            runtime,
         }
     }
 
-    /// Internal async implementation
-    async fn chat_async(&self, request: &ChatRequest) -> Result<LlmCallResult> {
+    /// Internal sync implementation with retry logic
+    fn chat_sync(&self, request: &ChatRequest) -> Result<LlmCallResult> {
         let url = format!("{}/chat/completions", self.base_url);
         let start = std::time::Instant::now();
 
@@ -160,15 +156,14 @@ impl Client {
                 )
                 .header("Content-Type", "application/json")
                 .json(request)
-                .send()
-                .await;
+                .send();
 
             match resp {
                 Ok(response) => {
                     let status = response.status();
 
                     if status.is_success() {
-                        let body: ChatResponse = response.json().await?;
+                        let body: ChatResponse = response.json()?;
                         return Ok(LlmCallResult {
                             response: body,
                             latency_ms: start.elapsed().as_millis() as u64,
@@ -179,7 +174,7 @@ impl Client {
                     let code = status.as_u16();
                     if is_retryable_status(code) {
                         if attempt >= MAX_RETRIES {
-                            let body = response.text().await.unwrap_or_default();
+                            let body = response.text().unwrap_or_default();
                             return Err(anyhow!(
                                 "API error {} after {} retries: {}",
                                 code,
@@ -203,12 +198,12 @@ impl Client {
                             code, wait_ms, attempt, MAX_RETRIES
                         );
 
-                        tokio::time::sleep(Duration::from_millis(wait_ms)).await;
+                        thread::sleep(Duration::from_millis(wait_ms));
                         backoff_ms = (backoff_ms * 2).min(MAX_BACKOFF_MS);
                         total_retries += 1;
                     } else {
                         // Non-retryable HTTP error (4xx except 429)
-                        let body = response.text().await.unwrap_or_default();
+                        let body = response.text().unwrap_or_default();
                         return Err(anyhow!("API error {}: {}", code, body));
                     }
                 }
@@ -228,7 +223,7 @@ impl Client {
                         wait_ms, attempt, MAX_RETRIES, e
                     );
 
-                    tokio::time::sleep(Duration::from_millis(wait_ms)).await;
+                    thread::sleep(Duration::from_millis(wait_ms));
                     backoff_ms = (backoff_ms * 2).min(MAX_BACKOFF_MS);
                     total_retries += 1;
                 }
@@ -239,12 +234,12 @@ impl Client {
 
 impl LlmClient for Client {
     fn chat(&self, request: &ChatRequest) -> Result<ChatResponse> {
-        let result = self.runtime.block_on(self.chat_async(request))?;
+        let result = self.chat_sync(request)?;
         Ok(result.response)
     }
 
     fn chat_with_metadata(&self, request: &ChatRequest) -> Result<LlmCallResult> {
-        self.runtime.block_on(self.chat_async(request))
+        self.chat_sync(request)
     }
 }
 
