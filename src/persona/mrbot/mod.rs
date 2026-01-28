@@ -27,8 +27,7 @@ pub struct MrBot {
 impl MrBot {
     /// Create a new MrBot persona
     pub fn new() -> Self {
-        let config =
-            loader::load_persona("mrbot").expect("Failed to load mrbot persona config");
+        let config = loader::load_persona("mrbot").expect("Failed to load mrbot persona config");
         let tools = config.tools_as_static();
         Self { config, tools }
     }

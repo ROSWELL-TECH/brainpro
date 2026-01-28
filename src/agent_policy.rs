@@ -1,5 +1,9 @@
 //! Multi-level agent policy framework.
 //!
+//! This module provides infrastructure for per-agent tool policies.
+
+#![allow(dead_code)]
+//!
 //! Provides per-agent tool policies with inheritance:
 //!
 //! ```text
@@ -163,13 +167,17 @@ impl AgentPolicy {
 
     /// Check if a tool is allowed by the allowlist (if set)
     fn check_allowlist(&self, tool: &str) -> Option<bool> {
-        self.allow_only.as_ref().map(|allowed| {
-            allowed.iter().any(|t| t == tool)
-        })
+        self.allow_only
+            .as_ref()
+            .map(|allowed| allowed.iter().any(|t| t == tool))
     }
 
     /// Check model restrictions
-    fn check_model_restrictions(&self, tool: &str, model: Option<&str>) -> Option<(Decision, String)> {
+    fn check_model_restrictions(
+        &self,
+        tool: &str,
+        model: Option<&str>,
+    ) -> Option<(Decision, String)> {
         if let Some(model) = model {
             for restriction in &self.model_restrictions {
                 if restriction.applies_to_model(model) && restriction.denies_tool(tool) {
@@ -314,20 +322,15 @@ impl PolicyStack {
             let matches = match leveled.level {
                 PolicyLevel::Global => true,
                 PolicyLevel::Group => {
-                    groups.map_or(false, |g| {
-                        leveled.name.as_ref().map_or(false, |n| g.contains(n))
-                    })
+                    groups.is_some_and(|g| leveled.name.as_ref().is_some_and(|n| g.contains(n)))
                 }
                 PolicyLevel::Agent => {
-                    agent_id.map_or(false, |id| {
-                        leveled.name.as_ref().map_or(false, |n| n == id)
-                    })
+                    agent_id.is_some_and(|id| leveled.name.as_ref().is_some_and(|n| n == id))
                 }
                 PolicyLevel::Subagent => {
                     // Subagent policies match if agent_id contains the subagent prefix
-                    agent_id.map_or(false, |id| {
-                        leveled.name.as_ref().map_or(false, |n| id.starts_with(n))
-                    })
+                    agent_id
+                        .is_some_and(|id| leveled.name.as_ref().is_some_and(|n| id.starts_with(n)))
                 }
                 PolicyLevel::Profile => true, // Profiles always apply when active
             };
@@ -362,47 +365,37 @@ impl PolicyStack {
                 if !allowed {
                     return (
                         Decision::Deny,
-                        Some(format!("not in allow_only list")),
+                        Some("not in allow_only list".to_string()),
                         Some(leveled.level),
                     );
                 }
             }
 
             // Check model restrictions
-            if let Some((decision, reason)) = policy.check_model_restrictions(tool, self.current_model.as_deref()) {
+            if let Some((decision, reason)) =
+                policy.check_model_restrictions(tool, self.current_model.as_deref())
+            {
                 return (decision, Some(reason), Some(leveled.level));
             }
 
             // Check deny rules (highest priority within policy)
             for pattern in &policy.deny {
                 if tool_filter::tool_matches(tool, pattern, arg_ref) {
-                    return (
-                        Decision::Deny,
-                        Some(pattern.clone()),
-                        Some(leveled.level),
-                    );
+                    return (Decision::Deny, Some(pattern.clone()), Some(leveled.level));
                 }
             }
 
             // Check ask rules
             for pattern in &policy.ask {
                 if tool_filter::tool_matches(tool, pattern, arg_ref) {
-                    return (
-                        Decision::Ask,
-                        Some(pattern.clone()),
-                        Some(leveled.level),
-                    );
+                    return (Decision::Ask, Some(pattern.clone()), Some(leveled.level));
                 }
             }
 
             // Check allow rules
             for pattern in &policy.allow {
                 if tool_filter::tool_matches(tool, pattern, arg_ref) {
-                    return (
-                        Decision::Allow,
-                        Some(pattern.clone()),
-                        Some(leveled.level),
-                    );
+                    return (Decision::Allow, Some(pattern.clone()), Some(leveled.level));
                 }
             }
 
@@ -477,7 +470,9 @@ impl PolicyStack {
                     if let Some(model) = &self.current_model {
                         for leveled in &applicable {
                             for restriction in &leveled.policy.model_restrictions {
-                                if restriction.applies_to_model(model) && restriction.denies_tool(name) {
+                                if restriction.applies_to_model(model)
+                                    && restriction.denies_tool(name)
+                                {
                                     return false;
                                 }
                             }
@@ -570,8 +565,7 @@ mod tests {
         let mut stack = PolicyStack::new();
         stack.add_global_deny("Bash(rm -rf:*)");
 
-        let (decision, rule, level) =
-            stack.resolve(None, "Bash", &json!({"command": "rm -rf /"}));
+        let (decision, rule, level) = stack.resolve(None, "Bash", &json!({"command": "rm -rf /"}));
 
         assert_eq!(decision, Decision::Deny);
         assert!(rule.is_some());
@@ -589,11 +583,19 @@ mod tests {
         stack.add_agent_policy("cleanup-agent", AgentPolicy::new().allow("Bash(rm:*)"));
 
         // Other agents still denied
-        let (decision, _, _) = stack.resolve(Some("other-agent"), "Bash", &json!({"command": "rm foo.txt"}));
+        let (decision, _, _) = stack.resolve(
+            Some("other-agent"),
+            "Bash",
+            &json!({"command": "rm foo.txt"}),
+        );
         assert_eq!(decision, Decision::Deny);
 
         // cleanup-agent is allowed
-        let (decision, _, level) = stack.resolve(Some("cleanup-agent"), "Bash", &json!({"command": "rm foo.txt"}));
+        let (decision, _, level) = stack.resolve(
+            Some("cleanup-agent"),
+            "Bash",
+            &json!({"command": "rm foo.txt"}),
+        );
         assert_eq!(decision, Decision::Allow);
         assert_eq!(level, Some(PolicyLevel::Agent));
     }
@@ -617,11 +619,7 @@ mod tests {
 
     #[test]
     fn test_model_restriction() {
-        let restriction = ModelRestriction::new(
-            "gpt-*",
-            vec!["ApplyPatch"],
-            "Not supported",
-        );
+        let restriction = ModelRestriction::new("gpt-*", vec!["ApplyPatch"], "Not supported");
 
         assert!(restriction.applies_to_model("gpt-4"));
         assert!(restriction.applies_to_model("gpt-4o-mini"));
@@ -636,8 +634,7 @@ mod tests {
         let mut stack = PolicyStack::new();
         stack.set_model("gpt-4o");
         stack.add_global_policy(
-            AgentPolicy::new()
-                .with_model_restriction(restrictions::openai_no_apply_patch()),
+            AgentPolicy::new().with_model_restriction(restrictions::openai_no_apply_patch()),
         );
 
         let (decision, reason, _) = stack.resolve(None, "ApplyPatch", &json!({}));
@@ -661,20 +658,14 @@ mod tests {
         stack.add_agent_to_group("dev-bot", "engineering");
 
         // dev-bot can run tests
-        let (decision, _, level) = stack.resolve(
-            Some("dev-bot"),
-            "Bash",
-            &json!({"command": "cargo test"}),
-        );
+        let (decision, _, level) =
+            stack.resolve(Some("dev-bot"), "Bash", &json!({"command": "cargo test"}));
         assert_eq!(decision, Decision::Allow);
         assert_eq!(level, Some(PolicyLevel::Group));
 
         // other-bot cannot
-        let (decision, _, _) = stack.resolve(
-            Some("other-bot"),
-            "Bash",
-            &json!({"command": "cargo test"}),
-        );
+        let (decision, _, _) =
+            stack.resolve(Some("other-bot"), "Bash", &json!({"command": "cargo test"}));
         assert_eq!(decision, Decision::Ask);
     }
 

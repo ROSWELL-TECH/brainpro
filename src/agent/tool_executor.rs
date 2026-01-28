@@ -169,11 +169,10 @@ pub fn execute_with_policy(
             }
         }
     };
-    let _ = ctx.transcript.borrow_mut().policy_decision(
-        name,
-        decision_str,
-        matched_rule.as_deref(),
-    );
+    let _ =
+        ctx.transcript
+            .borrow_mut()
+            .policy_decision(name, decision_str, matched_rule.as_deref());
 
     // Run PreToolUse hooks
     let (hook_proceed, updated_args) = ctx.hooks.borrow().pre_tool_use(name, &args);
@@ -227,7 +226,10 @@ pub fn execute_with_policy(
     let ok = !matches!(&result, DispatchResult::Error(_));
 
     // Log result
-    let _ = ctx.transcript.borrow_mut().tool_result(name, ok, &result_value);
+    let _ = ctx
+        .transcript
+        .borrow_mut()
+        .tool_result(name, ok, &result_value);
 
     // Run PostToolUse hooks
     ctx.hooks

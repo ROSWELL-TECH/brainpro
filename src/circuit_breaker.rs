@@ -5,24 +5,21 @@
 //! - Open: Failures exceeded threshold, requests are rejected immediately
 //! - HalfOpen: Recovery period, limited requests allowed to probe health
 
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 /// Circuit breaker state
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CircuitState {
+    #[default]
     Closed,
     Open,
     HalfOpen,
-}
-
-impl Default for CircuitState {
-    fn default() -> Self {
-        Self::Closed
-    }
 }
 
 /// Configuration for circuit breaker behavior
@@ -139,8 +136,7 @@ impl CircuitBreaker {
             CircuitState::Open => {
                 // Check if recovery timeout has passed
                 if let Some(last_failure) = state.last_failure_time {
-                    let recovery_duration =
-                        Duration::from_secs(self.config.recovery_timeout_secs);
+                    let recovery_duration = Duration::from_secs(self.config.recovery_timeout_secs);
                     if last_failure.elapsed() >= recovery_duration {
                         // Transition to half-open
                         state.state = CircuitState::HalfOpen;
@@ -459,7 +455,7 @@ mod tests {
 
         // Different backends get different circuit breakers
         let cb1 = registry.get("backend1");
-        let cb2 = registry.get("backend2");
+        let _cb2 = registry.get("backend2");
 
         cb1.record_failure();
         cb1.record_failure();

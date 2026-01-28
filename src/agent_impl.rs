@@ -1,5 +1,8 @@
 //! Agent loop for processing user input and executing tool calls.
 
+#![allow(dead_code)]
+#![allow(clippy::await_holding_refcell_ref)]
+
 use crate::{
     cli::Context,
     compact,
@@ -124,7 +127,11 @@ fn verbose(ctx: &Context, message: &str) {
 }
 
 /// Sync wrapper for worker.rs compatibility (deprecated - will be removed)
-pub fn run_turn_sync(ctx: &Context, user_input: &str, messages: &mut Vec<Value>) -> Result<TurnResult> {
+pub fn run_turn_sync(
+    ctx: &Context,
+    user_input: &str,
+    messages: &mut Vec<Value>,
+) -> Result<TurnResult> {
     let mut turn_result = TurnResult::default();
     let mut collected_response = String::new();
     let _ = ctx.transcript.borrow_mut().user_message(user_input);
@@ -246,10 +253,7 @@ pub fn run_turn_sync(ctx: &Context, user_input: &str, messages: &mut Vec<Value>)
                     match compact::compact_messages(messages, context_config, client, &target.model)
                     {
                         Ok((compacted, result)) => {
-                            eprintln!(
-                                "[auto-compact] {}",
-                                compact::format_result(&result)
-                            );
+                            eprintln!("[auto-compact] {}", compact::format_result(&result));
                             *messages = compacted;
                         }
                         Err(e) => {
@@ -824,10 +828,7 @@ pub async fn run_turn(
                     match compact::compact_messages(messages, context_config, client, &target.model)
                     {
                         Ok((compacted, result)) => {
-                            eprintln!(
-                                "[auto-compact] {}",
-                                compact::format_result(&result)
-                            );
+                            eprintln!("[auto-compact] {}", compact::format_result(&result));
                             *messages = compacted;
                         }
                         Err(e) => {

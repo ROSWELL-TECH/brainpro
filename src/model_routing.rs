@@ -9,6 +9,8 @@
 //! - Explicit @model annotations in prompts
 //! - Fallback chains when primary providers fail
 
+#![allow(dead_code)]
+
 use crate::config::Target;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -79,19 +81,14 @@ impl RouteCategory {
 }
 
 /// Cost tier for models
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CostTier {
     Low,
+    #[default]
     Medium,
     High,
     Premium,
-}
-
-impl Default for CostTier {
-    fn default() -> Self {
-        Self::Medium
-    }
 }
 
 /// Capabilities of a specific model
@@ -285,7 +282,11 @@ impl RoutingContext {
             if word.starts_with('@') && word.len() > 1 {
                 let annotation = &word[1..];
                 // Skip common @ mentions that aren't model specs
-                if annotation.contains('@') || annotation.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.') {
+                if annotation.contains('@')
+                    || annotation.chars().all(|c| {
+                        c.is_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.'
+                    })
+                {
                     return Some(annotation.to_string());
                 }
             }
@@ -520,7 +521,10 @@ mod tests {
             RoutingContext::extract_model_annotation("Route to @claude-3-5-sonnet@claude"),
             Some("claude-3-5-sonnet@claude".to_string())
         );
-        assert_eq!(RoutingContext::extract_model_annotation("No annotation here"), None);
+        assert_eq!(
+            RoutingContext::extract_model_annotation("No annotation here"),
+            None
+        );
     }
 
     #[test]

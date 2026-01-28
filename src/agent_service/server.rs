@@ -85,13 +85,9 @@ impl AgentServer {
                     let gateway_mode = self.config.gateway_mode;
                     let persona = self.config.persona.clone();
                     thread::spawn(move || {
-                        if let Err(e) = handle_connection(
-                            stream,
-                            in_flight,
-                            turn_store,
-                            gateway_mode,
-                            &persona,
-                        ) {
+                        if let Err(e) =
+                            handle_connection(stream, in_flight, turn_store, gateway_mode, &persona)
+                        {
                             eprintln!("[agent] Connection error: {}", e);
                         }
                     });

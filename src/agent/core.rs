@@ -8,6 +8,8 @@
 //! - mrbot/loop_impl.rs
 //! - worker.rs
 
+#![allow(dead_code)]
+
 use crate::agent::tool_executor::{self, DispatchResult};
 use crate::cli::Context;
 use crate::compact;
@@ -369,10 +371,7 @@ pub fn run_loop<H: AgentHooks>(
                     match compact::compact_messages(messages, context_config, client, &target.model)
                     {
                         Ok((compacted, result)) => {
-                            eprintln!(
-                                "[auto-compact] {}",
-                                compact::format_result(&result)
-                            );
+                            eprintln!("[auto-compact] {}", compact::format_result(&result));
                             *messages = compacted;
                         }
                         Err(e) => {
@@ -516,10 +515,7 @@ pub fn run_loop<H: AgentHooks>(
                             "message": parse_error
                         }
                     });
-                    eprintln!(
-                        "{}",
-                        tool_display::format_tool_result(name, &error_result)
-                    );
+                    eprintln!("{}", tool_display::format_tool_result(name, &error_result));
                     tool_results.push((tc.id.clone(), name.clone(), error_result));
                     continue;
                 }
@@ -646,7 +642,8 @@ pub fn run_loop<H: AgentHooks>(
         });
 
         if let Some(content) = last_assistant {
-            let (hook_triggered, continue_prompt) = ctx.hooks.borrow().on_stop("tool_finished", Some(&content));
+            let (hook_triggered, continue_prompt) =
+                ctx.hooks.borrow().on_stop("tool_finished", Some(&content));
             if hook_triggered {
                 turn_result.force_continue = true;
                 turn_result.continue_prompt = continue_prompt;

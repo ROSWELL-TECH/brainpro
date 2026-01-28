@@ -276,7 +276,10 @@ pub async fn run_once(ctx: &Context, prompt: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn run_repl(ctx: Context, initial_messages: Option<Vec<serde_json::Value>>) -> Result<()> {
+pub async fn run_repl(
+    ctx: Context,
+    initial_messages: Option<Vec<serde_json::Value>>,
+) -> Result<()> {
     let mut rl = DefaultEditor::new()?;
     let mut messages = initial_messages.unwrap_or_default();
 
@@ -341,7 +344,9 @@ pub async fn run_repl(ctx: Context, initial_messages: Option<Vec<serde_json::Val
                                         &ctx,
                                         "[User answered questions above]",
                                         &mut messages,
-                                    ).await {
+                                    )
+                                    .await
+                                    {
                                         Ok(continuation) => {
                                             total_stats.merge(&continuation.stats);
                                             current_result = continuation;
@@ -426,7 +431,11 @@ pub async fn run_repl(ctx: Context, initial_messages: Option<Vec<serde_json::Val
     Ok(())
 }
 
-async fn handle_command_async(ctx: &Context, cmd: &str, messages: &mut Vec<serde_json::Value>) -> bool {
+async fn handle_command_async(
+    ctx: &Context,
+    cmd: &str,
+    messages: &mut Vec<serde_json::Value>,
+) -> bool {
     let parts: Vec<&str> = cmd.splitn(2, ' ').collect();
     match parts[0] {
         "/exit" | "/quit" => return true,
@@ -574,7 +583,8 @@ async fn handle_command_async(ctx: &Context, cmd: &str, messages: &mut Vec<serde
             handle_skillpack_command(ctx, if parts.len() > 1 { parts[1] } else { "" });
         }
         "/plan" => {
-            handle_plan_command_async(ctx, if parts.len() > 1 { parts[1] } else { "" }, messages).await;
+            handle_plan_command_async(ctx, if parts.len() > 1 { parts[1] } else { "" }, messages)
+                .await;
         }
         _ => {
             // Check for user-defined slash commands
@@ -912,7 +922,11 @@ fn handle_skillpack_command(ctx: &Context, args: &str) {
     }
 }
 
-async fn handle_plan_command_async(ctx: &Context, args: &str, messages: &mut Vec<serde_json::Value>) {
+async fn handle_plan_command_async(
+    ctx: &Context,
+    args: &str,
+    messages: &mut Vec<serde_json::Value>,
+) {
     let parts: Vec<&str> = args.splitn(2, ' ').collect();
     let subcommand = parts.first().copied().unwrap_or("");
 
@@ -988,7 +1002,11 @@ async fn handle_plan_command_async(ctx: &Context, args: &str, messages: &mut Vec
     }
 }
 
-async fn handle_plan_start_async(ctx: &Context, goal: String, messages: &mut Vec<serde_json::Value>) {
+async fn handle_plan_start_async(
+    ctx: &Context,
+    goal: String,
+    messages: &mut Vec<serde_json::Value>,
+) {
     if goal.is_empty() {
         println!("Usage: /plan <task description>");
         return;
@@ -1453,7 +1471,8 @@ async fn try_run_slash_command_async(
             if result.force_continue {
                 if let Some(continue_prompt) = result.continue_prompt {
                     println!("[Continuing due to Stop hook...]");
-                    if let Ok(continuation) = agent::run_turn(ctx, &continue_prompt, messages).await {
+                    if let Ok(continuation) = agent::run_turn(ctx, &continue_prompt, messages).await
+                    {
                         total_stats.merge(&continuation.stats);
                     }
                 }

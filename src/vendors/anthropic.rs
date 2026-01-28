@@ -1,5 +1,9 @@
 //! Anthropic usage API integration.
 //!
+//! This module provides pricing infrastructure for Anthropic models.
+
+#![allow(dead_code)]
+//!
 //! Fetches real-time pricing and usage data from Anthropic's API.
 //! Note: Anthropic's pricing is typically accessed via their website or
 //! embedded in API responses rather than a dedicated pricing endpoint.
@@ -13,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::cost::ModelPricing;
 
@@ -136,7 +140,10 @@ pub fn get_latest_pricing() -> HashMap<String, ModelPricing> {
         "claude-sonnet-4.5".to_string(),
         ModelPricing::new(3.00, 15.00),
     );
-    models.insert("claude-sonnet-4".to_string(), ModelPricing::new(3.00, 15.00));
+    models.insert(
+        "claude-sonnet-4".to_string(),
+        ModelPricing::new(3.00, 15.00),
+    );
     models.insert(
         "claude-haiku-4.5".to_string(),
         ModelPricing::new(1.00, 5.00),

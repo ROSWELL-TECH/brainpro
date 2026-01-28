@@ -155,10 +155,7 @@ pub fn load_persona(name: &str) -> Result<PersonaConfig> {
     let persona_dir = base_path.join(name);
 
     if !persona_dir.exists() {
-        return Err(anyhow!(
-            "Persona directory not found: {:?}",
-            persona_dir
-        ));
+        return Err(anyhow!("Persona directory not found: {:?}", persona_dir));
     }
 
     // Load manifest

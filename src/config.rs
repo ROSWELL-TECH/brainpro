@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::Result;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -401,7 +403,7 @@ impl Config {
                 base_url: "https://api.venice.ai/api/v1".to_string(),
                 api_key_env: Some("VENICE_API_KEY".to_string()),
                 api_key: std::env::var("venice_api_key").ok(), // fallback to lowercase
-                zdr: true, // Venice has ZDR policy
+                zdr: true,                                     // Venice has ZDR policy
             },
         );
 

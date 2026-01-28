@@ -3,6 +3,8 @@
 //! Uses reqwest::blocking for synchronous HTTP calls with built-in
 //! connection pooling and timeout handling.
 
+#![allow(dead_code)]
+
 use anyhow::{anyhow, Result};
 use rand::Rng;
 use secrecy::{ExposeSecret, SecretString};
@@ -151,14 +153,9 @@ pub enum StreamEvent {
         name: String,
     },
     /// Argument delta for a tool call
-    ToolCallDelta {
-        index: usize,
-        arguments: String,
-    },
+    ToolCallDelta { index: usize, arguments: String },
     /// Stream completed with usage info
-    Done {
-        usage: Option<Usage>,
-    },
+    Done { usage: Option<Usage> },
 }
 
 /// Result of an LLM call including timing and retry info
@@ -379,7 +376,9 @@ impl StreamingClient {
             tools: request.tools.clone(),
             tool_choice: request.tool_choice.clone(),
             stream: true,
-            stream_options: Some(StreamOptions { include_usage: true }),
+            stream_options: Some(StreamOptions {
+                include_usage: true,
+            }),
         };
 
         let response = self
@@ -444,7 +443,9 @@ impl StreamingClient {
                 if let Some(delta_content) = &choice.delta.content {
                     if !delta_content.is_empty() {
                         content.push_str(delta_content);
-                        let _ = event_tx.send(StreamEvent::ContentDelta(delta_content.clone())).await;
+                        let _ = event_tx
+                            .send(StreamEvent::ContentDelta(delta_content.clone()))
+                            .await;
                     }
                 }
 
@@ -475,18 +476,22 @@ impl StreamingClient {
                             if let Some(name) = &func_delta.name {
                                 tool_calls[idx].function.name = name.clone();
                                 // Emit tool call start event
-                                let _ = event_tx.send(StreamEvent::ToolCallStart {
-                                    index: idx,
-                                    id: tool_calls[idx].id.clone(),
-                                    name: name.clone(),
-                                }).await;
+                                let _ = event_tx
+                                    .send(StreamEvent::ToolCallStart {
+                                        index: idx,
+                                        id: tool_calls[idx].id.clone(),
+                                        name: name.clone(),
+                                    })
+                                    .await;
                             }
                             if let Some(args) = &func_delta.arguments {
                                 tool_calls[idx].function.arguments.push_str(args);
-                                let _ = event_tx.send(StreamEvent::ToolCallDelta {
-                                    index: idx,
-                                    arguments: args.clone(),
-                                }).await;
+                                let _ = event_tx
+                                    .send(StreamEvent::ToolCallDelta {
+                                        index: idx,
+                                        arguments: args.clone(),
+                                    })
+                                    .await;
                             }
                         }
                     }
@@ -505,13 +510,25 @@ impl StreamingClient {
         }
 
         // Send done event
-        let _ = event_tx.send(StreamEvent::Done { usage: final_usage.clone() }).await;
+        let _ = event_tx
+            .send(StreamEvent::Done {
+                usage: final_usage.clone(),
+            })
+            .await;
 
         // Build accumulated response
         let message = Message {
             role: "assistant".to_string(),
-            content: if content.is_empty() { None } else { Some(content) },
-            tool_calls: if tool_calls.is_empty() { None } else { Some(tool_calls) },
+            content: if content.is_empty() {
+                None
+            } else {
+                Some(content)
+            },
+            tool_calls: if tool_calls.is_empty() {
+                None
+            } else {
+                Some(tool_calls)
+            },
         };
 
         Ok(ChatResponse {

@@ -1,5 +1,9 @@
 //! OpenAI usage and pricing integration.
 //!
+//! This module provides pricing infrastructure for OpenAI models.
+
+#![allow(dead_code)]
+//!
 //! Provides pricing data for OpenAI models.
 //! OpenAI's pricing is published on their website and embedded in API responses.
 

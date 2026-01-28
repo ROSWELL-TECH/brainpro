@@ -1,4 +1,6 @@
 //! Vendor-specific integrations.
+
+#![allow(dead_code)]
 //!
 //! Contains modules for vendor-specific API integrations,
 //! pricing lookups, and other vendor-dependent functionality.
@@ -121,4 +123,3 @@ pub fn get_pricing_diagnostics() -> Vec<PricingSource> {
 
     sources
 }
-

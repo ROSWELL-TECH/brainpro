@@ -6,6 +6,8 @@
 //! - Cooldown periods after failures
 //! - Integration with circuit breaker state
 
+#![allow(dead_code)]
+
 use crate::circuit_breaker::{CircuitBreakerRegistry, CircuitState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,21 +15,16 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 /// Health state of a provider
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HealthState {
     /// Provider is responding normally
+    #[default]
     Healthy,
     /// Provider is experiencing intermittent issues
     Degraded,
     /// Provider is not responding or failing consistently
     Unhealthy,
-}
-
-impl Default for HealthState {
-    fn default() -> Self {
-        Self::Healthy
-    }
 }
 
 /// Health metrics for a single provider
@@ -40,8 +37,8 @@ pub struct ProviderHealth {
     pub total_requests: u64,
     pub successful_requests: u64,
     pub failed_requests: u64,
-    pub last_success: Option<u64>, // Unix timestamp
-    pub last_failure: Option<u64>, // Unix timestamp
+    pub last_success: Option<u64>,   // Unix timestamp
+    pub last_failure: Option<u64>,   // Unix timestamp
     pub cooldown_until: Option<u64>, // Unix timestamp
 }
 
@@ -94,7 +91,7 @@ impl Default for HealthConfig {
 }
 
 /// Internal mutable state for a provider
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ProviderState {
     consecutive_failures: u32,
     consecutive_successes: u32,
@@ -106,23 +103,6 @@ struct ProviderState {
     last_success: Option<Instant>,
     last_failure: Option<Instant>,
     cooldown_until: Option<Instant>,
-}
-
-impl Default for ProviderState {
-    fn default() -> Self {
-        Self {
-            consecutive_failures: 0,
-            consecutive_successes: 0,
-            recent_latencies: Vec::new(),
-            latency_index: 0,
-            total_requests: 0,
-            successful_requests: 0,
-            failed_requests: 0,
-            last_success: None,
-            last_failure: None,
-            cooldown_until: None,
-        }
-    }
 }
 
 impl ProviderState {
@@ -274,9 +254,9 @@ impl ProviderHealthRegistry {
                 failed_requests: state.failed_requests,
                 last_success: state.last_success.map(|_| now_unix),
                 last_failure: state.last_failure.map(|_| now_unix),
-                cooldown_until: state.cooldown_until.map(|c| {
-                    now_unix + c.saturating_duration_since(Instant::now()).as_secs()
-                }),
+                cooldown_until: state
+                    .cooldown_until
+                    .map(|c| now_unix + c.saturating_duration_since(Instant::now()).as_secs()),
             }
         } else {
             ProviderHealth {
@@ -297,10 +277,7 @@ impl ProviderHealthRegistry {
     /// Get health info for all backends
     pub fn all_health_info(&self) -> Vec<ProviderHealth> {
         let providers = self.providers.read().unwrap();
-        providers
-            .keys()
-            .map(|k| self.get_health_info(k))
-            .collect()
+        providers.keys().map(|k| self.get_health_info(k)).collect()
     }
 
     /// Check if a backend is available (healthy or degraded, not in cooldown)

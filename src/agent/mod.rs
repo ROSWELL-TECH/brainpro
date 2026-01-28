@@ -8,6 +8,8 @@
 //! - `core` - Shared agent loop with hooks
 //! - `tool_executor` - Shared tool execution with policy/hooks
 
+#![allow(unused_imports)]
+
 pub mod core;
 pub mod tool_executor;
 

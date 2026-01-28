@@ -6,6 +6,8 @@
 //! - Auto-escalation to Strict when sensitive data detected
 //! - ZDR-aware provider filtering
 
+#![allow(dead_code)]
+
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -26,7 +28,7 @@ pub enum PrivacyLevel {
 
 impl PrivacyLevel {
     /// Parse from string
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "standard" => Some(Self::Standard),
             "sensitive" => Some(Self::Sensitive),
@@ -304,10 +306,16 @@ mod tests {
 
     #[test]
     fn test_privacy_level_parsing() {
-        assert_eq!(PrivacyLevel::from_str("standard"), Some(PrivacyLevel::Standard));
-        assert_eq!(PrivacyLevel::from_str("SENSITIVE"), Some(PrivacyLevel::Sensitive));
-        assert_eq!(PrivacyLevel::from_str("strict"), Some(PrivacyLevel::Strict));
-        assert_eq!(PrivacyLevel::from_str("invalid"), None);
+        assert_eq!(
+            PrivacyLevel::parse("standard"),
+            Some(PrivacyLevel::Standard)
+        );
+        assert_eq!(
+            PrivacyLevel::parse("SENSITIVE"),
+            Some(PrivacyLevel::Sensitive)
+        );
+        assert_eq!(PrivacyLevel::parse("strict"), Some(PrivacyLevel::Strict));
+        assert_eq!(PrivacyLevel::parse("invalid"), None);
     }
 
     #[test]

@@ -250,7 +250,12 @@ Keep edits minimal and precise."#;
     let bash_config = cfg.bash.clone();
 
     // Build context for tool execution
-    let ctx = match build_context(&cfg, root.clone(), request.session_id.clone(), Some(target.clone())) {
+    let ctx = match build_context(
+        &cfg,
+        root.clone(),
+        request.session_id.clone(),
+        Some(target.clone()),
+    ) {
         Ok(c) => c,
         Err(e) => {
             let _ = event_tx.send(AgentEvent::error(id, "context_error", &e));
@@ -581,7 +586,12 @@ Keep edits minimal and precise."#;
     let tool_schemas = tools::schemas_with_task(&schema_opts);
 
     // Build context
-    let ctx = match build_context(&cfg, root.clone(), state.session_id.clone(), Some(target.clone())) {
+    let ctx = match build_context(
+        &cfg,
+        root.clone(),
+        state.session_id.clone(),
+        Some(target.clone()),
+    ) {
         Ok(c) => c,
         Err(e) => {
             let _ = event_tx.send(AgentEvent::error(id, "context_error", &e));

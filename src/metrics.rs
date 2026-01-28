@@ -7,6 +7,8 @@
 //! - Token usage
 //! - Cost tracking
 
+#![allow(dead_code)]
+
 use prometheus::{CounterVec, Encoder, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -65,9 +67,8 @@ impl MetricsCollector {
         .buckets(vec![
             100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0, 30000.0, 60000.0,
         ]);
-        let requests_duration_ms =
-            HistogramVec::new(duration_opts, &[BACKEND_LABEL, MODEL_LABEL])
-                .expect("Failed to create duration histogram");
+        let requests_duration_ms = HistogramVec::new(duration_opts, &[BACKEND_LABEL, MODEL_LABEL])
+            .expect("Failed to create duration histogram");
         registry
             .register(Box::new(requests_duration_ms.clone()))
             .expect("Failed to register duration histogram");
@@ -77,8 +78,8 @@ impl MetricsCollector {
             "brainpro_circuit_trips_total",
             "Total circuit breaker trips",
         );
-        let circuit_trips_total =
-            CounterVec::new(circuit_opts, &[BACKEND_LABEL]).expect("Failed to create circuit counter");
+        let circuit_trips_total = CounterVec::new(circuit_opts, &[BACKEND_LABEL])
+            .expect("Failed to create circuit counter");
         registry
             .register(Box::new(circuit_trips_total.clone()))
             .expect("Failed to register circuit counter");
@@ -94,9 +95,8 @@ impl MetricsCollector {
 
         // Cost counter
         let cost_opts = Opts::new("brainpro_cost_usd_total", "Total cost in USD");
-        let cost_usd_total =
-            CounterVec::new(cost_opts, &[BACKEND_LABEL, MODEL_LABEL])
-                .expect("Failed to create cost counter");
+        let cost_usd_total = CounterVec::new(cost_opts, &[BACKEND_LABEL, MODEL_LABEL])
+            .expect("Failed to create cost counter");
         registry
             .register(Box::new(cost_usd_total.clone()))
             .expect("Failed to register cost counter");
@@ -125,7 +125,10 @@ impl MetricsCollector {
         let mut data = self.json_data.write().unwrap();
         data.total_requests += 1;
         data.successful_requests += 1;
-        *data.requests_by_backend.entry(backend.to_string()).or_default() += 1;
+        *data
+            .requests_by_backend
+            .entry(backend.to_string())
+            .or_default() += 1;
         *data.requests_by_model.entry(model.to_string()).or_default() += 1;
     }
 
@@ -160,7 +163,10 @@ impl MetricsCollector {
         let mut data = self.json_data.write().unwrap();
         data.total_requests += 1;
         data.failed_requests += 1;
-        *data.requests_by_backend.entry(backend.to_string()).or_default() += 1;
+        *data
+            .requests_by_backend
+            .entry(backend.to_string())
+            .or_default() += 1;
     }
 
     /// Record a failed request with error details
@@ -180,14 +186,15 @@ impl MetricsCollector {
 
     /// Record a circuit breaker trip
     pub fn record_circuit_trip(&self, backend: &str) {
-        self.circuit_trips_total
-            .with_label_values(&[backend])
-            .inc();
+        self.circuit_trips_total.with_label_values(&[backend]).inc();
 
         // Update JSON data
         let mut data = self.json_data.write().unwrap();
         data.circuit_trips += 1;
-        *data.circuit_trips_by_backend.entry(backend.to_string()).or_default() += 1;
+        *data
+            .circuit_trips_by_backend
+            .entry(backend.to_string())
+            .or_default() += 1;
     }
 
     /// Record a circuit breaker trip with details
@@ -204,13 +211,7 @@ impl MetricsCollector {
     }
 
     /// Record token usage
-    pub fn record_tokens(
-        &self,
-        backend: &str,
-        model: &str,
-        input_tokens: u64,
-        output_tokens: u64,
-    ) {
+    pub fn record_tokens(&self, backend: &str, model: &str, input_tokens: u64, output_tokens: u64) {
         self.tokens_total
             .with_label_values(&[backend, model, "input"])
             .inc_by(input_tokens as f64);

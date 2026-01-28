@@ -1,5 +1,9 @@
 //! Lane-based concurrency for gateway request processing.
 //!
+//! This module provides infrastructure for prioritized request processing.
+
+#![allow(dead_code)]
+//!
 //! Lanes provide prioritized, concurrent request processing with:
 //! - Priority ordering (Cron > Main > Subagent > Batch)
 //! - Per-lane concurrency limits
@@ -67,7 +71,7 @@ impl LaneType {
     }
 
     /// Parse from string
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "cron" => Some(LaneType::Cron),
             "main" => Some(LaneType::Main),
@@ -351,10 +355,7 @@ pub struct LaneWorker {
 }
 
 impl LaneWorker {
-    pub fn new(
-        manager: Arc<LaneManager>,
-        shutdown: tokio::sync::watch::Receiver<bool>,
-    ) -> Self {
+    pub fn new(manager: Arc<LaneManager>, shutdown: tokio::sync::watch::Receiver<bool>) -> Self {
         Self { manager, shutdown }
     }
 
@@ -416,13 +417,25 @@ mod tests {
 
         // Enqueue in reverse priority order
         manager
-            .enqueue(LaneType::Batch, "batch-session".to_string(), json!({"type": "batch"}))
+            .enqueue(
+                LaneType::Batch,
+                "batch-session".to_string(),
+                json!({"type": "batch"}),
+            )
             .unwrap();
         manager
-            .enqueue(LaneType::Main, "main-session".to_string(), json!({"type": "main"}))
+            .enqueue(
+                LaneType::Main,
+                "main-session".to_string(),
+                json!({"type": "main"}),
+            )
             .unwrap();
         manager
-            .enqueue(LaneType::Cron, "cron-session".to_string(), json!({"type": "cron"}))
+            .enqueue(
+                LaneType::Cron,
+                "cron-session".to_string(),
+                json!({"type": "cron"}),
+            )
             .unwrap();
 
         // Should dequeue in priority order (Cron first)

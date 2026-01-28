@@ -1,5 +1,9 @@
 //! Rich event streaming system for observability.
 //!
+//! This module provides infrastructure for future observability integration.
+
+#![allow(dead_code)]
+//!
 //! Provides a first-class event streaming architecture similar to production
 //! agent systems. Events are structured, typed, and support external propagation.
 //!
