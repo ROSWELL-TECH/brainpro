@@ -16,15 +16,25 @@ cargo test --no-fail-fast -- --nocapture  # Verbose test output
 **DO NOT RUN without explicit user request** - these tests call real LLM APIs.
 
 ```bash
-./validation/run-all.sh              # Full suite (~$1.25)
-./validation/run-all.sh 01-tools     # Single category
-./validation/run-all.sh 05-agent-loop  # Core multi-turn tests
-./validation/run-all.sh 06-plan-mode   # Core plan workflow tests
+cd validation && pip install -r requirements.txt
+
+# Run all tests (~$1.25)
+pytest
+
+# Run specific category
+pytest tests/test_01_tools.py       # Basic tools
+pytest tests/test_05_agent_loop.py  # Core multi-turn
+pytest tests/test_06_plan_mode.py   # Core plan workflow
+
+# Run with different modes
+pytest --mode=yo        # Direct binary (default)
+pytest --mode=native    # Native gateway
+pytest --mode=docker    # Docker gateway
 ```
 
-Tests validate outcomes (file creation, tool invocation, semantic content) not exact LLM output. Priority order for quick validation: `01-tools` → `05-agent-loop` → `06-plan-mode`.
+Tests validate outcomes (file creation, tool invocation, semantic content) not exact LLM output. Priority order for quick validation: `test_01_tools` → `test_05_agent_loop` → `test_06_plan_mode`.
 
-Results saved to `validation/results/YYYY-MM-DD-HHMMSS/`. See `validation/README.md` for details.
+See `validation/README.md` for details.
 
 **Binaries produced:**
 - `yo` - Direct CLI (MrCode persona)

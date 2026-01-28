@@ -79,3 +79,11 @@ fn test_sanitize_input() {
     assert_eq!(validation::sanitize_input("hello<script>"), "helloscript");
     assert_eq!(validation::sanitize_input("test_name-123"), "test_name-123");
 }
+
+#[test]
+fn test_validate_malformed_email() {
+    // These malformed emails should NOT be valid
+    assert!(!validation::validate_email("@."));
+    assert!(!validation::validate_email("a@."));
+    assert!(!validation::validate_email("@.b"));
+}

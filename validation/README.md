@@ -1,6 +1,6 @@
 # brainpro Manual Validation Framework
 
-A comprehensive manual validation suite for testing `brainpro` functionality.
+A comprehensive validation suite for testing `brainpro` functionality using Python/pytest.
 
 ## Overview
 
@@ -25,35 +25,64 @@ This framework validates `brainpro` functionality by testing **outcomes** rather
    # Or: export OPENAI_API_KEY="..."
    ```
 
-3. **Run setup** (optional - run-all.sh does this automatically):
+3. **Install Python dependencies**:
    ```bash
-   ./validation/setup.sh
+   cd validation
+   pip install -r requirements.txt
    ```
 
 ## Running Tests
 
-### Run All Tests
+### Run All Tests (yo mode - default)
 ```bash
-./validation/run-all.sh
+cd validation
+pytest
+# Or:
+./run_tests.py
+```
+
+### Run with Different Modes
+```bash
+# Direct yo binary (default)
+pytest --mode=yo
+
+# Native gateway (starts brainpro-gateway + brainpro-agent)
+pytest --mode=native
+
+# Docker gateway (uses docker-compose)
+pytest --mode=docker
+
+# Or use environment variable
+BRAINPRO_TEST_MODE=docker pytest
 ```
 
 ### Run Specific Category
 ```bash
-./validation/run-all.sh 01-tools
-./validation/run-all.sh 05-agent-loop
-./validation/run-all.sh 06-plan-mode
+pytest tests/test_01_tools.py
+pytest tests/test_05_agent_loop.py
+pytest tests/test_06_plan_mode.py
 ```
 
 ### Run Single Test
 ```bash
-./validation/tests/01-tools/test-read.sh
+pytest tests/test_01_tools.py::TestTools::test_read_basic
+pytest -k test_read_basic
+```
+
+### Useful Options
+```bash
+pytest -v                      # Verbose output
+pytest -vv                     # More verbose
+pytest -s                      # Show stdout/stderr
+pytest -x                      # Stop on first failure
+pytest -k "tools or loop"      # Run tests matching pattern
 ```
 
 ## Test Categories
 
 | Category | Description | Tests | Est. Cost |
 |----------|-------------|-------|-----------|
-| 01-tools | Basic tool operations | 6 | ~$0.05 |
+| 01-tools | Basic tool operations | 7 | ~$0.06 |
 | 02-exploration | Codebase understanding | 3 | ~$0.03 |
 | 03-editing | File creation/modification | 2 | ~$0.04 |
 | 04-build | cargo build/test | 2 | ~$0.03 |
@@ -77,73 +106,124 @@ This framework validates `brainpro` functionality by testing **outcomes** rather
 
 For quick validation, run in this order:
 
-1. `01-tools` - Verify basic tool operations work
-2. `05-agent-loop` - Validate multi-turn conversations (CORE)
-3. `06-plan-mode` - Validate plan mode workflow (CORE)
+1. `test_01_tools` - Verify basic tool operations work
+2. `test_05_agent_loop` - Validate multi-turn conversations (CORE)
+3. `test_06_plan_mode` - Validate plan mode workflow (CORE)
+
+## Execution Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `yo` | Direct `target/release/yo` binary | Default, simplest |
+| `native` | Harness starts gateway + agent processes | Test gateway mode locally |
+| `docker` | Harness uses docker-compose | Full containerized test |
+
+All 52 tests run in all modes. The `yo` binary is used in all modes; gateway modes pass `--gateway URL`.
 
 ## Writing New Tests
 
 ### Test Structure
-```bash
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../lib/common.sh"
-source "$SCRIPT_DIR/../../lib/assertions.sh"
+```python
+"""Test description."""
 
-setup_test "my-test-name"
+import pytest
+from harness.runner import BrainproRunner
+from harness.assertions import (
+    assert_exit_code,
+    assert_output_contains,
+    assert_file_exists,
+    assert_tool_called,
+)
 
-# Optional: reset scratch directory
-reset_scratch
+class TestCategory:
+    """Category description."""
 
-# Run brainpro
-PROMPT='Your prompt here'
-OUTPUT=$(run_brainpro_oneshot "$PROMPT")
-EXIT_CODE=$?
+    def test_feature(self, runner: BrainproRunner, scratch_dir):
+        """Test description."""
+        prompt = "Your prompt here"
 
-# Assertions
-assert_exit_code 0 "$EXIT_CODE"
-assert_output_contains "expected text" "$OUTPUT"
-assert_file_exists "$SCRATCH_DIR/created-file.txt"
+        result = runner.oneshot(prompt)
 
-report_result
+        assert_exit_code(0, result.exit_code)
+        assert_output_contains("expected", result.output)
+        assert_file_exists(scratch_dir.path / "file.txt")
+        assert_tool_called("Read", result.output)
 ```
 
-### Available Functions
+### Available Fixtures
 
-**common.sh:**
-- `run_brainpro_oneshot "prompt" [args...]` - Run brainpro in -p mode
-- `run_brainpro_repl "cmd1" "cmd2" ...` - Run brainpro REPL with piped input
-- `run_brainpro_in_mock_webapp "prompt" [args...]` - Run brainpro in mock_webapp_scratch
-- `reset_scratch` - Clean fixtures/scratch directory
-- `reset_mock_webapp` - Fresh copy of mock_webapp to scratch
-- `cleanup_mock_webapp` - Remove mock_webapp_scratch
-- `setup_test "name"` - Initialize test
-- `report_result` - Print PASS/FAIL
+**From conftest.py:**
+- `runner` - `BrainproRunner` instance for running commands
+- `scratch_dir` - Clean scratch directory (`fixtures/scratch`)
+- `mock_webapp` - Fresh copy of mock_webapp
+- `webapp_runner` - Runner that operates in mock_webapp directory
+- `sessions_dir` - Session directory manager
+- `fixtures_dir` - Path to fixtures directory
+- `hello_repo` - Path to hello_repo fixture
 
-**assertions.sh:**
-- `assert_exit_code expected actual`
-- `assert_output_contains "needle" "$output"` (case-insensitive)
-- `assert_output_matches "regex" "$output"`
-- `assert_output_not_contains "needle" "$output"`
-- `assert_file_exists "/path/to/file"`
-- `assert_file_not_exists "/path/to/file"`
-- `assert_file_contains "/path" "needle"`
-- `assert_file_not_contains "/path" "needle"`
-- `assert_tool_called "ToolName" "$output"`
-- `assert_tools_called "$output" "Tool1" "Tool2" ...`
-- `assert_cargo_test_passes "/path/to/project"`
-- `assert_cargo_test_fails "/path/to/project"`
-- `assert_single_test_passes "/path" "test_name"`
-- `assert_single_test_fails "/path" "test_name"`
-- `assert_git_clean "/path/to/repo"`
-- `assert_git_dirty "/path/to/repo"`
-- `assert_git_has_commits "/path" min_count`
+### Available Assertions
+
+**Exit codes:**
+- `assert_exit_code(expected, actual)`
+- `assert_success(exit_code)`
+- `assert_failure(exit_code)`
+
+**Output assertions:**
+- `assert_output_contains(needle, output)` - Case-insensitive
+- `assert_output_not_contains(needle, output)`
+- `assert_output_matches(pattern, output)` - Regex
+- `assert_output_contains_any(output, *patterns)`
+- `assert_equals(expected, actual)`
+
+**File assertions:**
+- `assert_file_exists(path)`
+- `assert_file_not_exists(path)`
+- `assert_file_contains(path, needle)`
+- `assert_file_not_contains(path, needle)`
+- `assert_dir_exists(path)`
+
+**Tool assertions:**
+- `assert_tool_called(tool_name, output)`
+- `assert_tools_called(output, *tools)`
+
+**Cargo assertions:**
+- `assert_cargo_test_passes(project_dir)`
+- `assert_cargo_test_fails(project_dir)`
+- `assert_single_test_passes(project_dir, test_name)`
+- `assert_single_test_fails(project_dir, test_name)`
+
+**Git assertions:**
+- `assert_git_clean(repo_dir)`
+- `assert_git_dirty(repo_dir)`
+- `assert_git_has_commits(repo_dir, min_count)`
+
+### Runner Methods
+
+```python
+# One-shot mode (single prompt)
+result = runner.oneshot("prompt", "--mode", "acceptEdits")
+
+# REPL mode (multiple commands)
+result = runner.repl(
+    "first command",
+    "second command",
+    "/exit"
+)
+
+# Without --yes flag (for permission tests)
+result = runner.oneshot_no_yes("prompt", stdin_input="n")
+
+# Run in specific directory
+webapp_runner = runner.with_working_dir(path)
+```
 
 ## Results
 
-Results are saved to `validation/results/YYYY-MM-DD-HHMMSS/`:
-- `summary.txt` - Pass/fail counts
-- `test-name.log` - Individual test logs with full output
+Pytest generates standard output. For detailed logs, use:
+```bash
+pytest -v --tb=long
+pytest -s  # Show all output
+```
 
 ## Design Principles
 
@@ -156,20 +236,19 @@ Results are saved to `validation/results/YYYY-MM-DD-HHMMSS/`:
 ## Fixtures
 
 - `fixtures/hello_repo/` - Simple Rust project for basic tests
-- `fixtures/mock_webapp/` - Full web app with intentional issues for advanced tests:
+- `fixtures/mock_webapp/` - Full web app with intentional issues:
   - Security issue: hardcoded API key in `auth.rs`
   - Deprecated function: `old_query()` in `database.rs`
   - Validation bug: `@.` passes email validation
   - Undocumented functions in `handlers.rs`
   - One intentionally failing test
-- `fixtures/mock_webapp_scratch/` - Ephemeral copy for tests that mutate the webapp
-- `fixtures/scratch/` - Ephemeral directory for test artifacts (reset each test)
+- `fixtures/mock_webapp_scratch/` - Ephemeral copy for tests that mutate
+- `fixtures/scratch/` - Ephemeral directory for test artifacts
 - `fixtures/agents/` - Subagent configurations
-- `fixtures/mcp_calc_server/` - MCP server for integration tests
 
 ## Troubleshooting
 
-### Test fails with "brainpro binary not found"
+### Test fails with "yo binary not found"
 ```bash
 cargo build --release
 ```
@@ -184,6 +263,17 @@ Some tests may take 30-60 seconds due to LLM response time.
 
 ### Test is flaky
 LLM outputs are non-deterministic. If a test fails:
-1. Check the log file in `results/`
+1. Run with `-v -s` to see output
 2. Consider loosening assertions (add more valid patterns)
 3. Ensure the prompt is specific enough
+
+### Gateway mode fails to start
+For native mode, ensure gateway binaries are built:
+```bash
+cargo build --release
+```
+
+For docker mode, ensure Docker is running:
+```bash
+docker compose up -d --build
+```
