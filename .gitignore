@@ -3,7 +3,10 @@
 .env
 target/
 fixtures/scratch/
+fixtures/mock_webapp_scratch/
 validation/results/
+__pycache__/
+*.pyc
 secrets/*.txt
 workspace/
 docker-compose.override.yml
