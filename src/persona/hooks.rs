@@ -14,10 +14,12 @@ use serde_json::Value;
 ///
 /// The only difference between MrCode and MrBot is whether
 /// Task tool is included - that's handled by AgentLoopConfig.
+#[allow(dead_code)] // Used by library consumers (yo binary)
 pub struct PersonaHooks<'a> {
     pub config: &'a PersonaConfig,
 }
 
+#[allow(dead_code)] // Used by library consumers (yo binary)
 impl<'a> PersonaHooks<'a> {
     pub fn new(config: &'a PersonaConfig) -> Self {
         Self { config }

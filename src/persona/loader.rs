@@ -27,8 +27,10 @@ struct SectionFrontmatter {
 /// A loaded prompt section
 #[derive(Debug, Clone)]
 pub struct PromptSection {
+    #[allow(dead_code)] // Used by library consumers
     pub name: String,
     pub order: i32,
+    #[allow(dead_code)] // Used by library consumers
     pub required: bool,
     pub condition: Option<String>,
     pub content: String,
@@ -53,16 +55,21 @@ fn default_permission_mode() -> String {
 /// Configuration loaded from a persona's manifest
 #[derive(Debug, Clone)]
 pub struct PersonaConfig {
+    #[allow(dead_code)] // Used by library consumers
     pub name: String,
     pub display_name: String,
+    #[allow(dead_code)] // Used by library consumers
     pub description: String,
+    #[allow(dead_code)] // Used by library consumers
     pub default_tools: Vec<String>,
+    #[allow(dead_code)] // Used by library consumers
     pub permission_mode: PermissionMode,
     pub sections: Vec<PromptSection>,
 }
 
 impl PersonaConfig {
     /// Get tools as static string slices (for backward compatibility)
+    #[allow(dead_code)] // Used by library consumers
     pub fn tools_as_static(&self) -> Vec<&'static str> {
         self.default_tools
             .iter()
@@ -241,6 +248,19 @@ fn should_include_section(section: &PromptSection, ctx: &PromptContext) -> bool 
 /// Maximum characters for workspace files (like OpenClaw: 20k chars)
 const MAX_WORKSPACE_FILE_CHARS: usize = 20_000;
 
+/// Workspace context loaded from .brainpro/ directory
+#[derive(Debug, Clone, Default)]
+pub struct WorkspaceContext {
+    /// MEMORY.md content - curated project knowledge
+    pub memory: Option<String>,
+    /// Daily notes (filename, content) - today and yesterday
+    pub daily_notes: Vec<(String, String)>,
+    /// WORKING.md content - current task state
+    pub working_state: Option<String>,
+    /// BOOTSTRAP.md content - project onboarding context
+    pub bootstrap: Option<String>,
+}
+
 /// Truncate large content with head/tail split (70% head, 20% tail, 10% separator)
 fn truncate_content(content: &str, max_chars: usize) -> String {
     if content.len() <= max_chars {
@@ -261,12 +281,12 @@ fn truncate_content(content: &str, max_chars: usize) -> String {
 }
 
 /// Load workspace memory files from .brainpro/ directory
-pub fn load_workspace_context(working_dir: &Path) -> (Option<String>, Vec<(String, String)>, Option<String>, Option<String>) {
+pub fn load_workspace_context(working_dir: &Path) -> WorkspaceContext {
     let brainpro_dir = working_dir.join(".brainpro");
 
     // Load MEMORY.md
     let memory_path = brainpro_dir.join("MEMORY.md");
-    let workspace_memory = fs::read_to_string(&memory_path)
+    let memory = fs::read_to_string(&memory_path)
         .ok()
         .map(|c| truncate_content(&c, MAX_WORKSPACE_FILE_CHARS));
 
@@ -278,7 +298,7 @@ pub fn load_workspace_context(working_dir: &Path) -> (Option<String>, Vec<(Strin
 
     // Load BOOTSTRAP.md (project onboarding/context)
     let bootstrap_path = brainpro_dir.join("BOOTSTRAP.md");
-    let bootstrap_content = fs::read_to_string(&bootstrap_path)
+    let bootstrap = fs::read_to_string(&bootstrap_path)
         .ok()
         .map(|c| truncate_content(&c, MAX_WORKSPACE_FILE_CHARS));
 
@@ -300,7 +320,12 @@ pub fn load_workspace_context(working_dir: &Path) -> (Option<String>, Vec<(Strin
         }
     }
 
-    (workspace_memory, daily_notes, working_state, bootstrap_content)
+    WorkspaceContext {
+        memory,
+        daily_notes,
+        working_state,
+        bootstrap,
+    }
 }
 
 /// Build the complete system prompt from loaded config
@@ -582,6 +607,70 @@ This is the body content."#;
         assert!(
             !prompt.contains("This is the project memory"),
             "Subagent prompt should NOT contain memory content"
+        );
+    }
+
+    #[test]
+    fn test_load_workspace_context_with_files() {
+        use std::io::Write;
+        use tempfile::TempDir;
+
+        // Create temp directory with .brainpro/ structure
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let brainpro_dir = temp_dir.path().join(".brainpro");
+        fs::create_dir_all(&brainpro_dir).expect("Failed to create .brainpro dir");
+
+        // Write BOOTSTRAP.md
+        let bootstrap_content = "# Project Bootstrap\nThis is the bootstrap content.";
+        let mut bootstrap_file = fs::File::create(brainpro_dir.join("BOOTSTRAP.md")).unwrap();
+        bootstrap_file.write_all(bootstrap_content.as_bytes()).unwrap();
+
+        // Write MEMORY.md
+        let memory_content = "# Project Memory\nThis is the memory content.";
+        let mut memory_file = fs::File::create(brainpro_dir.join("MEMORY.md")).unwrap();
+        memory_file.write_all(memory_content.as_bytes()).unwrap();
+
+        // Write WORKING.md
+        let working_content = "# Current Task\nWorking on feature X.";
+        let mut working_file = fs::File::create(brainpro_dir.join("WORKING.md")).unwrap();
+        working_file.write_all(working_content.as_bytes()).unwrap();
+
+        // Create memory/ directory and add a daily note for today
+        let memory_dir = brainpro_dir.join("memory");
+        fs::create_dir_all(&memory_dir).expect("Failed to create memory dir");
+        let today = Local::now().format("%Y-%m-%d").to_string();
+        let daily_filename = format!("{}.md", today);
+        let daily_content = "# Daily Notes\nDid some work today.";
+        let mut daily_file = fs::File::create(memory_dir.join(&daily_filename)).unwrap();
+        daily_file.write_all(daily_content.as_bytes()).unwrap();
+
+        // Load workspace context
+        let ws = load_workspace_context(temp_dir.path());
+
+        // Assert all files loaded correctly
+        assert!(ws.bootstrap.is_some(), "BOOTSTRAP.md should be loaded");
+        assert!(
+            ws.bootstrap.as_ref().unwrap().contains("bootstrap content"),
+            "Bootstrap content mismatch"
+        );
+
+        assert!(ws.memory.is_some(), "MEMORY.md should be loaded");
+        assert!(
+            ws.memory.as_ref().unwrap().contains("memory content"),
+            "Memory content mismatch"
+        );
+
+        assert!(ws.working_state.is_some(), "WORKING.md should be loaded");
+        assert!(
+            ws.working_state.as_ref().unwrap().contains("feature X"),
+            "Working state content mismatch"
+        );
+
+        assert_eq!(ws.daily_notes.len(), 1, "Should have one daily note");
+        assert_eq!(ws.daily_notes[0].0, daily_filename, "Daily note filename mismatch");
+        assert!(
+            ws.daily_notes[0].1.contains("some work today"),
+            "Daily note content mismatch"
         );
     }
 }

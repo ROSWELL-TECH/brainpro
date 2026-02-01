@@ -123,6 +123,19 @@ permission_mode: default
 - Skill pack activations
 - Errors
 
+### Workspace Memory Files
+
+MrBot loads persistent context from `.brainpro/`:
+
+| File | Purpose | Loaded |
+|------|---------|--------|
+| `BOOTSTRAP.md` | Project onboarding context | Always (main sessions) |
+| `MEMORY.md` | Curated project knowledge | Always (main sessions) |
+| `WORKING.md` | Current task state | Always (main sessions) |
+| `memory/YYYY-MM-DD.md` | Daily session notes | Today + yesterday only |
+
+Files are truncated at 20k chars (70% head, 20% tail). Subagents receive no workspace context.
+
 ## Protocol Layers
 
 ### Client ↔ Gateway
@@ -338,6 +351,7 @@ Rules are evaluated in order: `allow` → `ask` → `deny` → mode default.
 | `compact.rs` | Context compaction via summarization |
 | `subagent.rs` | Subagent runtime, tool filtering |
 | `model_routing.rs` | Task-based model selection |
+| `persona/loader.rs` | Persona prompt loading, workspace context |
 | `tools/*.rs` | Individual tool implementations |
 | `mcp/*.rs` | MCP client, server lifecycle |
 | `skillpacks/*.rs` | Skill pack parsing, activation |

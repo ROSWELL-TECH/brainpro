@@ -15,6 +15,7 @@ mod hooks;
 mod llm;
 mod metrics;
 mod model_routing;
+mod persona;
 mod plan;
 mod policy;
 mod privacy;

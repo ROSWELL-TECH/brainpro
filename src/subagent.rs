@@ -191,13 +191,20 @@ pub fn run_subagent(
     trace(ctx, agent_name, "TARGET", &format!("{}", target));
 
     // Build system prompt for subagent
-    let mut system_prompt = spec
-        .system_prompt
-        .as_deref()
-        .unwrap_or(
-            "You are a specialized subagent. Complete the assigned task using only your available tools.",
-        )
-        .to_string();
+    let mut system_prompt = if let Some(custom) = &spec.system_prompt {
+        custom.clone()
+    } else {
+        // Use persona system for default prompt with is_subagent flag
+        // This ensures workspace files are properly excluded
+        use crate::persona::{PromptContext, loader};
+        let persona_config = loader::load_persona("mrbot").ok();
+        if let Some(config) = persona_config {
+            let pctx = PromptContext::from_context(ctx).into_subagent();
+            loader::build_system_prompt(&config, &pctx)
+        } else {
+            "You are a specialized subagent. Complete the assigned task using only your available tools.".to_string()
+        }
+    };
 
     // Add optimization mode instructions if -O flag is set
     if ctx.args.optimize {

@@ -12,6 +12,7 @@ use anyhow::Result;
 use serde_json::Value;
 
 /// Run a single turn of the MrBot agent loop
+#[allow(dead_code)] // Used by library consumers
 pub fn run_turn(
     config: &PersonaConfig,
     ctx: &Context,
