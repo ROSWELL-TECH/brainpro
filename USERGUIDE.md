@@ -150,6 +150,7 @@ Your agent maintains persistent state across restarts:
 | **Command history** | Arrow-key recall of past prompts (like bash history) |
 | **Metrics** | Token usage, costs, request counts over time |
 | **Local config** | Project-specific settings and permission rules |
+| **Workspace memory** | `.brainpro/` files for project context continuity |
 
 This state lives in a Docker volume (`brainpro-data`) that survives container rebuilds and upgrades. Your agent's "memory" is durable.
 
@@ -664,3 +665,125 @@ Prometheus metrics available at `/metrics` (gateway mode):
 - `brainpro_cost_usd_total{backend,model}`
 
 JSON export: `~/.brainpro/metrics.json`
+
+---
+
+## Part 8: Workspace Memory
+
+MrBot maintains persistent context through memory files in `.brainpro/`.
+
+### Directory Structure
+
+```
+.brainpro/
+├── BOOTSTRAP.md        # Project onboarding (what is this project?)
+├── MEMORY.md           # Curated knowledge (stable facts, decisions)
+├── WORKING.md          # Current task state (resume point)
+└── memory/
+    ├── 2025-01-31.md   # Yesterday's session log
+    └── 2025-02-01.md   # Today's session log
+```
+
+### File Purposes
+
+| File | When to Use | Who Updates |
+|------|-------------|-------------|
+| **BOOTSTRAP.md** | Project setup, key patterns, team conventions | Human (usually once) |
+| **MEMORY.md** | Stable facts, architectural decisions, lessons learned | Human or agent |
+| **WORKING.md** | Current task, progress, blockers, resume context | Agent (proactively) |
+| **Daily notes** | Timestamped activity log, raw session history | Agent (automatically) |
+
+### Example: BOOTSTRAP.md
+
+```markdown
+# Project: acme-api
+
+REST API for Acme Corp's widget management system.
+
+## Tech Stack
+- Rust with Axum framework
+- PostgreSQL via sqlx
+- Redis for caching
+- Docker Compose for local dev
+
+## Key Patterns
+- Repository pattern for data access (src/repos/)
+- DTOs separate from domain models (src/dto/ vs src/models/)
+- All handlers return Result<Json<T>, AppError>
+- Tests use testcontainers for DB
+
+## Team Conventions
+- Commits: conventional format (feat:, fix:, docs:)
+- PRs require passing CI + 1 approval
+- No direct pushes to main
+
+## Critical Context
+- Widget pricing logic is complex - see src/pricing/README.md
+- Legacy migration in progress - some tables have _v2 suffix
+- Rate limiting uses sliding window, not token bucket
+```
+
+### Example: MEMORY.md
+
+```markdown
+# Project Memory
+
+## Decisions Made
+- 2025-01-15: Chose sqlx over diesel for compile-time query checking
+- 2025-01-20: Added Redis caching layer for /widgets endpoint (was hitting 500ms)
+- 2025-01-28: Switched from reqwest to ureq for sync HTTP client (simpler)
+
+## Gotchas
+- `Widget.price` is in cents, not dollars
+- The `archived` field is soft-delete, not physical
+- Test DB resets between test modules but not individual tests
+
+## User Preferences
+- Prefers explicit error types over anyhow in public APIs
+- Likes tests in same file as implementation (mod tests { ... })
+- Wants changelog entries for user-facing changes
+```
+
+### Example: WORKING.md
+
+```markdown
+# Current Task
+
+## What I'm Doing
+Implementing pagination for GET /widgets endpoint
+
+## Progress
+- [x] Added `limit` and `offset` query params
+- [x] Updated repository to accept pagination
+- [ ] Add Link headers for pagination navigation
+- [ ] Update OpenAPI spec
+- [ ] Write integration tests
+
+## Context for Next Session
+The repository change is in src/repos/widget.rs:45-60.
+Need to decide: cursor-based or offset-based pagination?
+User mentioned they prefer cursor for large datasets.
+
+## Blockers
+None currently
+```
+
+### How Memory is Loaded
+
+At session start, MrBot loads:
+1. **BOOTSTRAP.md** - Project context (loaded first)
+2. **MEMORY.md** - Curated knowledge
+3. **Daily notes** - Today and yesterday only
+4. **WORKING.md** - Current task state (loaded last)
+
+**Truncation**: Files over 20,000 characters are truncated (70% head, 20% tail, 10% separator).
+
+**Subagents**: Do NOT receive workspace memory. They get focused task prompts only.
+
+### Best Practices
+
+1. **Keep BOOTSTRAP.md stable** - Update rarely, when project fundamentals change
+2. **Curate MEMORY.md** - Don't dump everything; keep what's useful long-term
+3. **Let agent manage WORKING.md** - It will update this proactively
+4. **Daily notes are ephemeral** - Only 2 days loaded; archive manually if needed
+5. **Don't store secrets** - Memory files may appear in transcripts

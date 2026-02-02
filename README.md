@@ -18,6 +18,7 @@ A local agentic coding assistant. Vendor-neutral, multi-model routing—send cod
 - **MCP integration** - External tool servers via Model Context Protocol
 - **Subagents** - Delegate to specialized agents with restricted tools
 - **Skill packs** - Reusable instruction sets with tool restrictions
+- **Workspace memory** - Persistent context via BOOTSTRAP.md, MEMORY.md, WORKING.md
 - **Permission system** - Granular allow/ask/deny rules
 - **Session transcripts** - JSONL audit logs
 

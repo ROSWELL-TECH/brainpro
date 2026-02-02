@@ -15,6 +15,7 @@ mod hooks;
 mod llm;
 mod metrics;
 mod model_routing;
+mod persona;
 mod plan;
 mod policy;
 mod privacy;
@@ -208,6 +209,7 @@ async fn main() -> Result<()> {
         turn_counter: RefCell::new(0),
         command_index: RefCell::new(command_index),
         todo_state: RefCell::new(tools::todo::TodoState::new()),
+        persona_cache: RefCell::new(std::collections::HashMap::new()),
     };
 
     // Fire SessionStart hook

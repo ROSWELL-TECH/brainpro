@@ -17,6 +17,7 @@ use anyhow::Result;
 use serde_json::Value;
 
 /// MrBot persona - conversational bot with SOUL
+#[allow(dead_code)] // Used by library consumers
 pub struct MrBot {
     /// Loaded configuration from files
     config: PersonaConfig,
@@ -24,6 +25,7 @@ pub struct MrBot {
     tools: Vec<&'static str>,
 }
 
+#[allow(dead_code)] // Used by library consumers
 impl MrBot {
     /// Create a new MrBot persona
     pub fn new() -> Self {

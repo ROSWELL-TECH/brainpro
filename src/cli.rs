@@ -9,6 +9,7 @@ use crate::{
     cost::{format_cost, SessionCosts},
     hooks::HookManager,
     model_routing::ModelRouter,
+    persona::PersonaConfig,
     plan::{self, PlanModeState},
     policy::PolicyEngine,
     session,
@@ -21,6 +22,7 @@ use clap::Parser;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -173,6 +175,28 @@ pub struct Context {
     pub command_index: RefCell<CommandIndex>,
     // Todo list for task tracking
     pub todo_state: RefCell<TodoState>,
+    // Cached persona configs (lazy-loaded)
+    pub persona_cache: RefCell<HashMap<String, PersonaConfig>>,
+}
+
+impl Context {
+    /// Get cached persona config, loading from disk on first access.
+    pub fn get_persona_config(&self, name: &str) -> Option<PersonaConfig> {
+        // Check cache first
+        if let Some(config) = self.persona_cache.borrow().get(name) {
+            return Some(config.clone());
+        }
+
+        // Load and cache
+        if let Ok(config) = crate::persona::loader::load_persona(name) {
+            self.persona_cache
+                .borrow_mut()
+                .insert(name.to_string(), config.clone());
+            Some(config)
+        } else {
+            None
+        }
+    }
 }
 
 /// Print command stats to stderr

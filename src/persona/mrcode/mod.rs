@@ -16,6 +16,7 @@ use anyhow::Result;
 use serde_json::Value;
 
 /// MrCode persona - focused coding assistant
+#[allow(dead_code)] // Used by library consumers (yo binary)
 pub struct MrCode {
     /// Loaded configuration from files
     config: PersonaConfig,
@@ -23,6 +24,7 @@ pub struct MrCode {
     tools: Vec<&'static str>,
 }
 
+#[allow(dead_code)] // Used by library consumers (yo binary)
 impl MrCode {
     /// Create a new MrCode persona
     pub fn new() -> Self {
