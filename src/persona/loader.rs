@@ -4,7 +4,7 @@
 //! Supports YAML frontmatter + Markdown body format.
 
 use anyhow::{anyhow, Result};
-use chrono::{Local, Duration};
+use chrono::{Duration, Local};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -271,7 +271,14 @@ fn truncate_content(content: &str, max_chars: usize) -> String {
     let tail_chars = (max_chars as f64 * 0.2) as usize;
 
     let head: String = content.chars().take(head_chars).collect();
-    let tail: String = content.chars().rev().take(tail_chars).collect::<String>().chars().rev().collect();
+    let tail: String = content
+        .chars()
+        .rev()
+        .take(tail_chars)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
 
     let truncated_chars = content.len() - head_chars - tail_chars;
     format!(
@@ -308,7 +315,9 @@ pub fn load_workspace_context(working_dir: &Path) -> WorkspaceContext {
 
     if memory_dir.exists() {
         let today = Local::now().format("%Y-%m-%d").to_string();
-        let yesterday = (Local::now() - Duration::days(1)).format("%Y-%m-%d").to_string();
+        let yesterday = (Local::now() - Duration::days(1))
+            .format("%Y-%m-%d")
+            .to_string();
 
         for date in [today, yesterday] {
             let filename = format!("{}.md", date);
@@ -369,26 +378,18 @@ pub fn build_system_prompt(config: &PersonaConfig, ctx: &PromptContext) -> Strin
 
         // Add MEMORY.md content
         if let Some(ref memory) = ctx.workspace_memory {
-            workspace_context_parts.push(format!(
-                "### Project Memory (MEMORY.md)\n{}",
-                memory
-            ));
+            workspace_context_parts.push(format!("### Project Memory (MEMORY.md)\n{}", memory));
         }
 
         // Add daily notes
         for (filename, content) in &ctx.daily_notes {
-            workspace_context_parts.push(format!(
-                "### Daily Notes ({})\n{}",
-                filename, content
-            ));
+            workspace_context_parts.push(format!("### Daily Notes ({})\n{}", filename, content));
         }
 
         // Add WORKING.md content
         if let Some(ref working) = ctx.working_state {
-            workspace_context_parts.push(format!(
-                "### Current Task State (WORKING.md)\n{}",
-                working
-            ));
+            workspace_context_parts
+                .push(format!("### Current Task State (WORKING.md)\n{}", working));
         }
 
         if !workspace_context_parts.is_empty() {
@@ -562,9 +563,7 @@ This is the body content."#;
         let ctx = PromptContext {
             workspace_memory: Some("This is the project memory.".to_string()),
             working_state: Some("Currently working on feature X.".to_string()),
-            daily_notes: vec![
-                ("2024-01-15.md".to_string(), "Did some stuff.".to_string()),
-            ],
+            daily_notes: vec![("2024-01-15.md".to_string(), "Did some stuff.".to_string())],
             is_subagent: false,
             ..Default::default()
         };
@@ -623,7 +622,9 @@ This is the body content."#;
         // Write BOOTSTRAP.md
         let bootstrap_content = "# Project Bootstrap\nThis is the bootstrap content.";
         let mut bootstrap_file = fs::File::create(brainpro_dir.join("BOOTSTRAP.md")).unwrap();
-        bootstrap_file.write_all(bootstrap_content.as_bytes()).unwrap();
+        bootstrap_file
+            .write_all(bootstrap_content.as_bytes())
+            .unwrap();
 
         // Write MEMORY.md
         let memory_content = "# Project Memory\nThis is the memory content.";
@@ -667,7 +668,10 @@ This is the body content."#;
         );
 
         assert_eq!(ws.daily_notes.len(), 1, "Should have one daily note");
-        assert_eq!(ws.daily_notes[0].0, daily_filename, "Daily note filename mismatch");
+        assert_eq!(
+            ws.daily_notes[0].0, daily_filename,
+            "Daily note filename mismatch"
+        );
         assert!(
             ws.daily_notes[0].1.contains("some work today"),
             "Daily note content mismatch"
