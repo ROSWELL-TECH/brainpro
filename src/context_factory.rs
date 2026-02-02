@@ -106,6 +106,7 @@ pub fn build_context(
         turn_counter: RefCell::new(0),
         command_index: RefCell::new(command_index),
         todo_state: RefCell::new(TodoState::new()),
+        persona_cache: RefCell::new(std::collections::HashMap::new()),
     })
 }
 

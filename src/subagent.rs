@@ -197,7 +197,7 @@ pub fn run_subagent(
         // Use persona system for default prompt with is_subagent flag
         // This ensures workspace files are properly excluded
         use crate::persona::{PromptContext, loader};
-        let persona_config = loader::load_persona("mrbot").ok();
+        let persona_config = ctx.get_persona_config("mrbot");
         if let Some(config) = persona_config {
             let pctx = PromptContext::from_context(ctx).into_subagent();
             loader::build_system_prompt(&config, &pctx)
