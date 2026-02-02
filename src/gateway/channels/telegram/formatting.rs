@@ -201,13 +201,16 @@ fn parse_markdown_link(chars: &[char], start: usize) -> Option<(usize, usize, us
 
 /// Truncate text to fit Telegram message limits (4096 chars)
 pub fn truncate_for_telegram(text: &str, max_len: usize) -> String {
-    if text.len() <= max_len {
+    let char_count = text.chars().count();
+    if char_count <= max_len {
         return text.to_string();
     }
 
-    // Find a good breaking point
+    // Find a good breaking point (in chars, not bytes)
     let truncate_at = max_len.saturating_sub(20);
-    let truncated = &text[..truncate_at];
+
+    // Collect chars up to truncate_at to get a valid UTF-8 boundary
+    let truncated: String = text.chars().take(truncate_at).collect();
 
     // Try to break at newline
     if let Some(pos) = truncated.rfind('\n') {
@@ -236,6 +239,21 @@ mod tests {
         let long = "a".repeat(200);
         let truncated = truncate_for_telegram(&long, 100);
         assert!(truncated.len() < 150); // Leaves room for suffix
+        assert!(truncated.contains("truncated"));
+    }
+
+    #[test]
+    fn test_truncate_utf8() {
+        // Test with multi-byte UTF-8 characters (emoji are 4 bytes each)
+        let emoji_text = "🎉".repeat(50); // 50 emojis = 50 chars but 200 bytes
+        let truncated = truncate_for_telegram(&emoji_text, 30);
+        assert!(truncated.contains("truncated"));
+        // Should not panic and should produce valid UTF-8
+        assert!(truncated.is_ascii() || truncated.chars().count() > 0);
+
+        // Test with mixed content
+        let mixed = format!("Hello 世界! {}", "🚀".repeat(40));
+        let truncated = truncate_for_telegram(&mixed, 25);
         assert!(truncated.contains("truncated"));
     }
 }
